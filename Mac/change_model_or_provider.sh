@@ -105,7 +105,7 @@ fetch_nvidia_models() {
 
 echo ""
 echo -e "${CYAN}=========================================================${RESET}"
-echo -e "  ${BOLD}Portable AI USB - Reconfiguration Tool (macOS)${RESET}"
+echo -e "  ${BOLD}OpenClaude Multi-Platform - Reconfig Tool${RESET}"
 echo -e "${CYAN}=========================================================${RESET}"
 echo ""
 

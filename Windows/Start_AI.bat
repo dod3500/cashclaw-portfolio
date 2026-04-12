@@ -37,7 +37,7 @@ echo !CYAN! / ____/ /_/ / / / /_/ /_/ / /_/ / /  __/  / ___ ^|_/ /   !RESET!
 echo !CYAN!/_/    \____/_/  \__/\__,_/_.___/_/\___/  /_/  ^|_/___/   !RESET!
 echo.
 echo !CYAN!=========================================================!RESET!
-echo   !BOLD!Portable AI USB - Launcher!RESET!
+echo   !BOLD!OpenClaude Multi-Platform - Launcher!RESET!
 echo !CYAN!=========================================================!RESET!
 echo.
 
@@ -446,7 +446,7 @@ if "!AI_PROVIDER!"=="ollama" set "PROVIDER_NAME=Ollama (Local)"
 title Portable AI USB - !PROVIDER_NAME! - !AI_DISPLAY_MODEL!
 
 echo !CYAN!=========================================================!RESET!
-echo   !BOLD!Portable AI USB - Ready!RESET!
+echo   !BOLD!OpenClaude Multi-Platform - Ready!RESET!
 echo !CYAN!=========================================================!RESET!
 echo.
 echo   !BOLD!Provider!RESET! : !GREEN!!PROVIDER_NAME!!RESET!

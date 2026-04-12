@@ -32,7 +32,7 @@ if exist "%ENV_FILE%" (
 cls
 echo.
 echo !CYAN!=========================================================!RESET!
-echo   !BOLD!Portable AI USB - Reconfiguration Tool!RESET!
+echo   !BOLD!OpenClaude Multi-Platform - Reconfig Tool!RESET!
 echo !CYAN!=========================================================!RESET!
 echo.
 echo   !BOLD!Current Settings:!RESET!

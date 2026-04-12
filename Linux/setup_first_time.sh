@@ -22,7 +22,7 @@ echo -e "${CYAN} / ____/ /_/ / / / /_/ /_/ / /_/ / /  __/  / ___ |_/ /   ${RESET
 echo -e "${CYAN}/_/    \\____/_/  \\__/\\__,_/_.___/_/\\___/  /_/  |_/___/   ${RESET}"
 echo ""
 echo -e "${CYAN}=========================================================${RESET}"
-echo -e "  ${BOLD}First Time Setup - Linux${RESET}"
+echo -e "  ${BOLD}OpenClaude Multi-Platform - Setup${RESET}"
 echo -e "${CYAN}=========================================================${RESET}"
 echo ""
 echo "  This will download the AI Engine and Core Files"

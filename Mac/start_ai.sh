@@ -38,7 +38,7 @@ echo -e "${CYAN} / ____/ /_/ / / / /_/ /_/ / /_/ / /  __/  / ___ |_/ /   ${RESET
 echo -e "${CYAN}/_/    \\____/_/  \\__/\\__,_/_.___/_/\\___/  /_/  |_/___/   ${RESET}"
 echo ""
 echo -e "${CYAN}=========================================================${RESET}"
-echo -e "  ${BOLD}Portable AI USB - Launcher (macOS)${RESET}"
+echo -e "  ${BOLD}OpenClaude Multi-Platform - Launcher${RESET}"
 echo -e "${CYAN}=========================================================${RESET}"
 echo ""
 
@@ -346,7 +346,7 @@ case "$AI_PROVIDER" in
 esac
 
 echo -e "${CYAN}=========================================================${RESET}"
-echo -e "  ${BOLD}Portable AI USB - Ready${RESET}"
+echo -e "  ${BOLD}OpenClaude Multi-Platform - Ready${RESET}"
 echo -e "${CYAN}=========================================================${RESET}"
 echo ""
 echo -e "  ${BOLD}Provider${RESET} : ${GREEN}${PROVIDER_NAME}${RESET}"

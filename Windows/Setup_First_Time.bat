@@ -21,7 +21,7 @@ echo !CYAN! / ____/ /_/ / / / /_/ /_/ / /_/ / /  __/  / ___ ^|_/ /   !RESET!
 echo !CYAN!/_/    \____/_/  \__/\__,_/_.___/_/\___/  /_/  ^|_/___/   !RESET!
 echo.
 echo !CYAN!=========================================================!RESET!
-echo   !BOLD!First Time Setup - Windows!RESET!
+echo   !BOLD!OpenClaude Multi-Platform - Setup!RESET!
 echo !CYAN!=========================================================!RESET!
 echo.
 echo   This will download the AI Engine and Core Files
