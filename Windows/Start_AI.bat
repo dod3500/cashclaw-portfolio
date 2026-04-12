@@ -420,6 +420,17 @@ set "CMD_ARGS="
 goto do_launch
 
 :do_launch
+if "!AI_PROVIDER!"=="ollama" (
+    if exist "%DATA_DIR%\ollama\ollama.exe" (
+        echo   !CYAN![~] Starting Local Ollama Server...!RESET!
+        set "OLLAMA_MODELS=%DATA_DIR%\ollama\data"
+        start "Ollama Portable" /B /MIN "%DATA_DIR%\ollama\ollama.exe" serve >nul 2>&1
+        timeout /t 3 /nobreak >nul
+        echo   !GREEN![OK] Ollama running!RESET!
+        echo.
+    )
+)
+
 echo   !CYAN![~] Starting AI Engine...!RESET!
 echo.
 set "PATH=%NODE_DIR%;%PATH%"
@@ -432,5 +443,13 @@ if defined AI_PROVIDER set "PROVIDER_ARGS=--provider !AI_PROVIDER!"
 pushd "%BIN_DIR%"
 call npx.cmd openclaude !PROVIDER_ARGS! !CMD_ARGS!
 popd
+
+if "!AI_PROVIDER!"=="ollama" (
+    if exist "%DATA_DIR%\ollama\ollama.exe" (
+        echo.
+        echo   !CYAN![~] Stopping Local Ollama Server...!RESET!
+        taskkill /F /IM ollama.exe >nul 2>&1
+    )
+)
 
 pause

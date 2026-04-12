@@ -122,6 +122,7 @@ function getSystemInfo() {
         portableGit: IS_WIN && existsSync(join(BIN_DIR, 'git', 'cmd', 'git.exe')),
         portablePython: IS_WIN && existsSync(join(BIN_DIR, 'python', 'python.exe')),
         engineVersion: getInstalledVersion(),
+        ollamaInstalled: existsSync(join(DATA_DIR, 'ollama', 'ollama.exe')) || existsSync(join(DATA_DIR, 'ollama', 'ollama')),
         diskFree: 0, diskTotal: 0,
     };
     try {
@@ -758,8 +759,80 @@ const server = createServer(async (req, res) => {
             else if (provider === 'gemini') { const r = await fetchExternal(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`); valid = r.status === 200; }
             else if (provider === 'anthropic') { const r = await fetchExternal('https://api.anthropic.com/v1/models', { 'x-api-key': key, 'anthropic-version': '2023-06-01' }); valid = r.status === 200; }
             else if (provider === 'openai') { const r = await fetchExternal('https://api.openai.com/v1/models', { 'Authorization': `Bearer ${key}` }); valid = r.status === 200; }
-            else if (provider === 'ollama') valid = true;
+            else if (provider === 'ollama') { 
+                try { const r = await fetchExternal('http://127.0.0.1:11434/api/tags'); valid = r.status === 200; } catch { valid = false; }
+            }
             return sendJSON(res, 200, { valid });
+        }
+
+        // Ollama Local Endpoints
+        if (url.pathname === '/api/ollama/status' && req.method === 'GET') {
+            const out = { installed: false, running: false };
+            out.installed = existsSync(join(DATA_DIR, 'ollama', 'ollama.exe')) || existsSync(join(DATA_DIR, 'ollama', 'ollama'));
+            try {
+                const r = await fetchExternal('http://127.0.0.1:11434/api/tags');
+                if (r.status === 200) out.running = true;
+            } catch {}
+            return sendJSON(res, 200, out);
+        }
+        
+        if (url.pathname === '/api/ollama/models' && req.method === 'GET') {
+            const models = [];
+            const txtPath = join(DATA_DIR, 'models', 'installed-models.txt');
+            if (existsSync(txtPath)) {
+                try {
+                    const lines = readFileSync(txtPath, 'utf8').split('\n').filter(Boolean);
+                    for (const line of lines) {
+                        const parts = line.split('|');
+                        if (parts.length >= 1) {
+                            models.push({ id: parts[0], name: parts[1] || parts[0], label: parts[2] || '' });
+                        }
+                    }
+                } catch {}
+            }
+            try {
+                const r = await fetchExternal('http://127.0.0.1:11434/api/tags');
+                if (r.status === 200) {
+                    const parsed = JSON.parse(r.data);
+                    for (const m of (parsed.models || [])) {
+                        if (!models.find(x => x.id === m.name)) models.push({ id: m.name, name: m.name, label: 'API' });
+                    }
+                }
+            } catch {}
+            return sendJSON(res, 200, { models });
+        }
+
+        if (url.pathname === '/api/ollama/start' && req.method === 'POST') {
+            try {
+                if (IS_WIN) {
+                    const exe = join(DATA_DIR, 'ollama', 'ollama.exe');
+                    if (existsSync(exe)) {
+                        const env = { ...process.env, OLLAMA_MODELS: join(DATA_DIR, 'ollama', 'data') };
+                        exec(`start "" /B /MIN "${exe}" serve`, { cwd: join(DATA_DIR, 'ollama'), env });
+                        return sendJSON(res, 200, { success: true });
+                    }
+                } else {
+                    const bin = join(DATA_DIR, 'ollama', 'ollama');
+                    if (existsSync(bin)) {
+                        const env = { ...process.env, OLLAMA_MODELS: join(DATA_DIR, 'ollama', 'data') };
+                        exec(`"${bin}" serve > /dev/null 2>&1 &`, { cwd: join(DATA_DIR, 'ollama'), env });
+                        return sendJSON(res, 200, { success: true });
+                    }
+                }
+                return sendJSON(res, 404, { error: 'Ollama not installed' });
+            } catch (e) {
+                return sendJSON(res, 500, { error: e.message });
+            }
+        }
+        
+        if (url.pathname === '/api/ollama/stop' && req.method === 'POST') {
+            try {
+                if (IS_WIN) execSync('taskkill /F /IM ollama.exe', { stdio: 'ignore' });
+                else execSync('pkill -f "ollama serve"', { stdio: 'ignore' });
+                return sendJSON(res, 200, { success: true });
+            } catch (e) {
+                return sendJSON(res, 500, { error: e.message });
+            }
         }
 
         // System

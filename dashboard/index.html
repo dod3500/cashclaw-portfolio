@@ -524,6 +524,13 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
             <div class="sys-item"><div class="sys-label">Python</div><div class="sys-val" id="sysPython">—</div></div>
           </div>
         </div>
+        <div class="card" id="cardOllama" style="display:none"><h2>Local AI (Ollama)</h2><p class="subtitle">Manage portable Ollama engine</p>
+          <div class="sys-grid">
+            <div class="sys-item"><div class="sys-label">Status</div><div class="sys-val" id="sysOllamaStatus">—</div></div>
+            <div class="sys-item"><div class="sys-label">Actions</div><div class="sys-val" style="display:flex;gap:8px;margin-top:2px" id="sysOllamaActions"></div></div>
+          </div>
+          <div id="sysOllamaModels" style="margin-top:14px;font-size:0.82rem;color:var(--text2);line-height:1.6"></div>
+        </div>
         <div class="card"><h2>Storage</h2><p class="subtitle">Drive usage</p>
           <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:3px"><span id="diskUsed">—</span><span id="diskTotal">—</span></div>
           <div class="progress-bar"><div class="progress-fill" id="diskBar" style="width:0%"></div></div>
@@ -625,7 +632,9 @@ async function loadConfig() {
     const isConfigured = !!cfg.AI_PROVIDER;
     document.getElementById('noConfigBanner').style.display = isConfigured ? 'none' : 'flex';
 
-    const pName = cfg.AI_PROVIDER === 'openai' && cfg.OPENAI_BASE_URL?.includes('openrouter') ? 'OpenRouter' : providerNames[cfg.AI_PROVIDER] || cfg.AI_PROVIDER || '—';
+    const pName = cfg.AI_PROVIDER === 'openai' && cfg.OPENAI_BASE_URL?.includes('openrouter') ? 'OpenRouter' : 
+                  cfg.AI_PROVIDER === 'ollama' ? 'Local AI' :
+                  providerNames[cfg.AI_PROVIDER] || cfg.AI_PROVIDER || '—';
     const model = cfg.AI_DISPLAY_MODEL || cfg.OPENAI_MODEL || '—';
 
     document.getElementById('sbProvider').textContent = pName;
@@ -1323,11 +1332,30 @@ function showKeyStatus(html,type){
 
 async function initModelStep(){
   const isOR=setupState.provider==='openrouter';
+  const isOllama=setupState.provider==='ollama';
   document.getElementById('tierToggle').style.display=isOR?'':'none';
-  document.getElementById('modelSearchWrap').style.display=isOR?'':'none';
-  document.getElementById('manualModelWrap').style.display=isOR?'none':'';
-  if(!isOR){document.getElementById('manualModel').placeholder=`Default: ${defaults[setupState.provider]||''}`;return;}
-  fetchModels(setupState.tier);
+  document.getElementById('modelSearchWrap').style.display=(isOR||isOllama)?'':'none';
+  document.getElementById('modelSearch').style.display=isOllama?'none':'';
+  document.getElementById('manualModelWrap').style.display=(isOR||isOllama)?'none':'';
+  if(isOR) fetchModels(setupState.tier);
+  else if(isOllama) await fetchOllamaModels();
+  else { document.getElementById('manualModel').placeholder=`Default: ${defaults[setupState.provider]||''}`; }
+}
+
+async function fetchOllamaModels() {
+  const listEl=document.getElementById('modelList');
+  const loadEl=document.getElementById('modelLoading');
+  listEl.innerHTML='';loadEl.style.display='flex';
+  try{
+    const res=await fetch(`${API}/api/ollama/models`);
+    const d=await res.json();
+    if((d.models||[]).length === 0) {
+       listEl.innerHTML='<div style="padding:14px;color:var(--text2);font-size:0.8rem">No local models found.<br><br>Close dashboard and run <strong>Setup_Local_Models.bat</strong> in the Windows folder first to download local models!</div>';
+    } else {
+       renderModels(d.models.map(m=>m.id));
+    }
+  }catch{listEl.innerHTML='<div style="padding:14px;color:var(--text2);font-size:0.8rem">Failed to load local models.</div>';}
+  loadEl.style.display='none';
 }
 
 async function fetchModels(tier){
@@ -1389,6 +1417,33 @@ async function loadSystemInfo(){
     document.getElementById('sysEngine').textContent=d.engineVersion||'Not installed';
     document.getElementById('sysGit').innerHTML=d.hasGit?`<span class="badge badge-success">${d.portableGit?'USB':'System'}</span>`:'<span class="badge badge-error">Not found</span>';
     document.getElementById('sysPython').innerHTML=d.hasPython?`<span class="badge badge-success">${d.portablePython?'USB':'System'}</span>`:'<span class="badge badge-error">Not found</span>';
+    
+    if (d.ollamaInstalled) {
+       document.getElementById('cardOllama').style.display='block';
+       try {
+         const oRes = await fetch(`${API}/api/ollama/status`);
+         const oData = await oRes.json();
+         document.getElementById('sysOllamaStatus').innerHTML = oData.running ? '<span class="badge badge-success">Running</span>' : '<span class="badge badge-error">Stopped</span>';
+         
+         const actionsEl = document.getElementById('sysOllamaActions');
+         if (oData.running) {
+             actionsEl.innerHTML = `<button class="btn btn-outline" style="padding:5px 12px;font-size:0.75rem" onclick="toggleOllama('stop')">Stop</button>`;
+         } else {
+             actionsEl.innerHTML = `<button class="btn btn-primary" style="padding:5px 12px;font-size:0.75rem" onclick="toggleOllama('start')">Start</button>`;
+         }
+         
+         const mRes = await fetch(`${API}/api/ollama/models`);
+         const mData = await mRes.json();
+         if(mData.models && mData.models.length>0) {
+             document.getElementById('sysOllamaModels').innerHTML = `<strong>Installed Models:</strong><br>` + mData.models.map(m=>`<div style="margin-top:6px;display:flex;align-items:center;gap:6px"><span>• ${m.name}</span> <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--text2)">${m.label||'Local'}</span></div>`).join('');
+         } else {
+             document.getElementById('sysOllamaModels').innerHTML = `No local models installed.`;
+         }
+       } catch {}
+    } else {
+       document.getElementById('cardOllama').style.display='none';
+    }
+
     if(d.diskTotal){
       const used=d.diskTotal-d.diskFree;
       document.getElementById('diskUsed').textContent=`Used: ${(used/1073741824).toFixed(1)} GB`;
@@ -1414,6 +1469,16 @@ async function viewLog(path){
   viewer.style.display='block';viewer.textContent='Loading...';
   try{const res=await fetch(`${API}/api/logs/read?path=${encodeURIComponent(path)}`);const {content}=await res.json();viewer.textContent=content||'(empty)';}
   catch{viewer.textContent='Failed to read file.';}
+}
+
+async function toggleOllama(action) {
+  try {
+    await fetch(`${API}/api/ollama/${action}`, {method:'POST'});
+    showToast(`Ollama ${action === 'start' ? 'started' : 'stopped'}`, 'success');
+    setTimeout(loadSystemInfo, 1500);
+  } catch {
+    showToast(`Failed to ${action} Ollama`, 'error');
+  }
 }
 
 // ─── Actions ─────────────────────────────────────────────────
