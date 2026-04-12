@@ -32,7 +32,7 @@ if exist "%ENV_FILE%" (
 cls
 echo.
 echo !CYAN!=========================================================!RESET!
-echo   !BOLD!OpenClaude Multi-Platform - Reconfig Tool!RESET!
+echo   !BOLD!Claude Code - Open Source Reconfig Tool!RESET!
 echo !CYAN!=========================================================!RESET!
 echo.
 echo   !BOLD!Current Settings:!RESET!
@@ -60,67 +60,97 @@ if errorlevel 1 goto change_model
 :change_model
 echo.
 echo   !BOLD!--- CHANGE MODEL ---!RESET!
-if "!PROVIDER_TYPE!"=="openrouter" (
-    echo   !CYAN!1^)!RESET! Free Models
-    echo   !CYAN!2^)!RESET! Paid Models
-    choice /C 12 /N /M "  Select category (1 or 2): "
-    if errorlevel 2 ( set "TIER=paid" ) else ( set "TIER=free" )
-    
-    echo   !CYAN![~] Fetching !TIER! models...!RESET!
-    set "idx=1"
-    if "!TIER!"=="free" (
-        set "PS_CMD=$d = (Invoke-RestMethod 'https://openrouter.ai/api/v1/models').data; $d | Where-Object { $_.id -match ':free$' } | Select-Object -First 20 -ExpandProperty id"
-    ) else (
-        set "PS_CMD=$d = (Invoke-RestMethod 'https://openrouter.ai/api/v1/models').data; $d | Where-Object { $_.id -notmatch ':free$' } | Select-Object -First 20 -ExpandProperty id"
-    )
-    
-    for /f "delims=" %%I in ('powershell -NoProfile -Command "!PS_CMD!"') do (
-        set "MODEL_!idx!=%%I"
-        echo   !CYAN!!idx!^)!RESET! %%I
-        set /a "idx+=1"
-    )
-    set "MAX_IDX=!idx!"
-    echo   !CYAN!!MAX_IDX!^)!RESET! Custom Model...
-    
-    set /p "MODEL_SEL=  Choose a model (1-!MAX_IDX!): "
-    if "!MODEL_SEL!"=="!MAX_IDX!" (
-        set /p "NEW_MODEL=  Enter custom model string: "
-    ) else (
-        for %%V in (!MODEL_SEL!) do set "NEW_MODEL=!MODEL_%%V!"
-    )
-    if not "!NEW_MODEL!"=="" (
-        set "OPENAI_MODEL=!NEW_MODEL!"
-        set "AI_DISPLAY_MODEL=!NEW_MODEL!"
-    )
-) else if "!PROVIDER_TYPE!"=="nvidia" (
-    echo   !CYAN![~] Fetching NVIDIA models...!RESET!
-    set "idx=1"
-    set "PS_CMD=$headers = @{ 'Authorization' = 'Bearer !OPENAI_API_KEY!' }; $d = (Invoke-RestMethod -Uri 'https://integrate.api.nvidia.com/v1/models' -Headers $headers).data; $d | Select-Object -First 20 -ExpandProperty id"
-    for /f "delims=" %%I in ('powershell -NoProfile -Command "!PS_CMD!"') do (
-        set "MODEL_!idx!=%%I"
-        echo   !CYAN!!idx!^)!RESET! %%I
-        set /a "idx+=1"
-    )
-    set "MAX_IDX=!idx!"
-    echo   !CYAN!!MAX_IDX!^)!RESET! Custom Model...
-    
-    set /p "MODEL_SEL=  Choose a model (1-!MAX_IDX!): "
-    if "!MODEL_SEL!"=="!MAX_IDX!" (
-        set /p "NEW_MODEL=  Enter custom model string: "
-    ) else (
-        for %%V in (!MODEL_SEL!) do set "NEW_MODEL=!MODEL_%%V!"
-    )
-    if not "!NEW_MODEL!"=="" (
-        set "OPENAI_MODEL=!NEW_MODEL!"
-        set "AI_DISPLAY_MODEL=!NEW_MODEL!"
-    )
+if "!PROVIDER_TYPE!"=="openrouter" goto mode_openrouter
+if "!PROVIDER_TYPE!"=="nvidia" goto mode_nvidia
+
+:mode_default
+set /p "NEW_MODEL=  Enter new model string (Current: !AI_DISPLAY_MODEL!): "
+if not "!NEW_MODEL!"=="" (
+    set "AI_DISPLAY_MODEL=!NEW_MODEL!"
+    if "!AI_PROVIDER!"=="openai" set "OPENAI_MODEL=!NEW_MODEL!"
+    if "!AI_PROVIDER!"=="ollama" set "OPENAI_MODEL=!NEW_MODEL!"
+)
+goto save_and_exit
+
+:mode_openrouter
+echo   !CYAN!1^)!RESET! Free Models
+echo   !CYAN!2^)!RESET! Paid Models
+choice /C 12 /N /M "  Select category (1 or 2): "
+if errorlevel 2 ( set "TIER=paid" ) else ( set "TIER=free" )
+
+echo   !CYAN![~] Fetching !TIER! models...!RESET!
+set "idx=1"
+if "!TIER!"=="free" (
+    set "PS_CMD=$d = (Invoke-RestMethod 'https://openrouter.ai/api/v1/models').data; $d | Where-Object { $_.id -match ':free$' } | Select-Object -First 20 -ExpandProperty id"
 ) else (
-    set /p "NEW_MODEL=  Enter new model string (Current: !AI_DISPLAY_MODEL!): "
-    if not "!NEW_MODEL!"=="" (
-        set "AI_DISPLAY_MODEL=!NEW_MODEL!"
-        if "!AI_PROVIDER!"=="openai" set "OPENAI_MODEL=!NEW_MODEL!"
-        if "!AI_PROVIDER!"=="ollama" set "OPENAI_MODEL=!NEW_MODEL!"
+    set "PS_CMD=$d = (Invoke-RestMethod 'https://openrouter.ai/api/v1/models').data; $d | Where-Object { $_.id -notmatch ':free$' } | Select-Object -First 20 -ExpandProperty id"
+)
+
+for /f "delims=" %%I in ('powershell -NoProfile -Command "!PS_CMD!"') do (
+    set "MODEL_!idx!=%%I"
+    echo   !CYAN!!idx!^)!RESET! %%I
+    set /a "idx+=1"
+)
+set "MAX_IDX=!idx!"
+echo   !CYAN!!MAX_IDX!^)!RESET! Custom Model...
+
+set "NEW_MODEL="
+set /p "MODEL_SEL=  Choose a model (1-!MAX_IDX!): "
+if defined MODEL_SEL (
+    if "!MODEL_SEL!"=="!MAX_IDX!" (
+        set /p "NEW_MODEL=  Enter custom model string: "
+    ) else (
+        for %%V in (!MODEL_SEL!) do set "NEW_MODEL=!MODEL_%%V!"
     )
+)
+if not "!NEW_MODEL!"=="" (
+    set "OPENAI_MODEL=!NEW_MODEL!"
+    set "AI_DISPLAY_MODEL=!NEW_MODEL!"
+)
+goto save_and_exit
+
+:mode_nvidia
+echo   !CYAN!--- NVIDIA MODELS ---!RESET! !DIM!(Live + Curated)!RESET!
+set "idx=1"
+for %%M in (
+    "moonshotai/kimi-k2-instruct" "moonshotai/kimi-k2-thinking" "z-ai/glm4.7"
+    "deepseek-ai/deepseek-v3.2" "deepseek-ai/deepseek-v3.1-terminus" "stepfun-ai/step-3.5-flash"
+    "mistralai/mistral-large-3-675b-instruct-2512" "qwen/qwen3-coder-480b-a35b-instruct"
+    "mistralai/mistral-nemotron" "bytedance/seed-oss-36b-instruct" "mistralai/mamba-codestral-7b-v0.1"
+    "google/gemma-7b" "tiiuae/falcon3-7b-instruct" "minimaxai/minimax-m2.7"
+) do (
+    set "MODEL_!idx!=%%~M"
+    echo   !CYAN!!idx!^)!RESET! %%~M
+    set /a "idx+=1"
+)
+set "FETCH_CMD=$headers = @{ 'Authorization' = 'Bearer !OPENAI_API_KEY!' }; try { $d = (Invoke-RestMethod -Uri 'https://integrate.api.nvidia.com/v1/models' -Headers $headers).data; $d | Select-Object -ExpandProperty id | Select-Object -First 10 } catch { }"
+for /f "delims=" %%I in ('powershell -NoProfile -Command "!FETCH_CMD!"') do (
+    set "EXISTS=0"
+    set "TEMP_ID=%%I"
+    for /L %%K in (1,1,14) do (
+        if "!TEMP_ID!"=="!MODEL_%%K!" set "EXISTS=1"
+    )
+    if "!EXISTS!"=="0" (
+        set "MODEL_!idx!=!TEMP_ID!"
+        echo   !CYAN!!idx!^)!RESET! !TEMP_ID!
+        set /a "idx+=1"
+    )
+)
+set "MAX_IDX=!idx!"
+echo   !CYAN!!MAX_IDX!^)!RESET! Custom Model...
+
+set "NEW_MODEL="
+set /p "MODEL_SEL=  Choose a model (1-!MAX_IDX!): "
+if defined MODEL_SEL (
+    if "!MODEL_SEL!"=="!MAX_IDX!" (
+        set /p "NEW_MODEL=  Enter custom model string: "
+    ) else (
+        for %%V in (!MODEL_SEL!) do set "NEW_MODEL=!MODEL_%%V!"
+    )
+)
+if not "!NEW_MODEL!"=="" (
+    set "OPENAI_MODEL=!NEW_MODEL!"
+    set "AI_DISPLAY_MODEL=!NEW_MODEL!"
 )
 goto save_and_exit
 

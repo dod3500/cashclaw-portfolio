@@ -1,4 +1,4 @@
-# 🚀 OpenClaude Multi-Platform
+# 🚀 Claude Code - Open Source Multi-Platform
 
 > **The Open Source Claude Code is here, running on Windows, Linux, and macOS.**  
 > **Run powerful AI coding agents from any computer — no installation required.**  
@@ -8,7 +8,7 @@
 
 ## 📦 What's Inside
 
-**OpenClaude Multi-Platform** is the professional-grade, **open source Claude Code** alternative designed for the modern developer. It provides a fully portable, zero-footprint AI coding environment that runs directly from any folder or USB drive. 
+**Claude Code (Open Source)** is the professional-grade, multi-platform alternative... 
 
 By bundling a pre-configured Node.js runtime, high-performance AI engines, and an advanced web dashboard, it delivers a seamless **multi-platform** experience across Windows, Linux, and macOS without ever touching the host system's global configuration.
 

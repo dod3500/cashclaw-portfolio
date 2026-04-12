@@ -38,7 +38,7 @@ echo -e "${CYAN} / ____/ /_/ / / / /_/ /_/ / /_/ / /  __/  / ___ |_/ /   ${RESET
 echo -e "${CYAN}/_/    \\____/_/  \\__/\\__,_/_.___/_/\\___/  /_/  |_/___/   ${RESET}"
 echo ""
 echo -e "${CYAN}=========================================================${RESET}"
-echo -e "  ${BOLD}OpenClaude Multi-Platform - Launcher${RESET}"
+echo -e "  ${BOLD}Claude Code - Open Source Multi-Platform${RESET}"
 echo -e "${CYAN}=========================================================${RESET}"
 echo ""
 
@@ -285,8 +285,12 @@ setup_nvidia() {
     echo -e "  ${GREEN}[OK] Key Verified!${RESET}"
     echo ""
 
+    CURATED="moonshotai/kimi-k2-instruct moonshotai/kimi-k2-thinking z-ai/glm4.7 deepseek-ai/deepseek-v3.2 deepseek-ai/deepseek-v3.1-terminus stepfun-ai/step-3.5-flash mistralai/mistral-large-3-675b-instruct-2512 qwen/qwen3-coder-480b-a35b-instruct mistralai/mistral-nemotron bytedance/seed-oss-36b-instruct mistralai/mamba-codestral-7b-v0.1 google/gemma-7b tiiuae/falcon3-7b-instruct minimaxai/minimax-m2.7"
     echo -e "  ${CYAN}--- NVIDIA MODELS ---${RESET} ${DIM}(Fetching...)${RESET}"
-    MODELS=$(curl -sf -H "Authorization: Bearer $USER_API_KEY" https://integrate.api.nvidia.com/v1/models 2>/dev/null | grep -Eo '"id"[[:space:]]*:[[:space:]]*"[^"]*"' | sed -e 's/"id"[[:space:]]*:[[:space:]]*"//g' -e 's/"//g' | head -20)
+    LIVE=$(curl -sf -H "Authorization: Bearer $USER_API_KEY" https://integrate.api.nvidia.com/v1/models 2>/dev/null | grep -Eo '"id"[[:space:]]*:[[:space:]]*"[^"]*"' | sed -e 's/"id"[[:space:]]*:[[:space:]]*"//g' -e 's/"//g' | head -15)
+    MODELS=""
+    for m in $CURATED; do MODELS="${MODELS}${m}"$'\n'; done
+    MODELS="${MODELS}${LIVE}"
 
     if [ -z "$MODELS" ]; then
         echo -e "  ${YELLOW}[API Error] Could not fetch models. Entering fallback...${RESET}"
@@ -346,7 +350,7 @@ case "$AI_PROVIDER" in
 esac
 
 echo -e "${CYAN}=========================================================${RESET}"
-echo -e "  ${BOLD}OpenClaude Multi-Platform - Ready${RESET}"
+echo -e "  ${BOLD}Claude Code - Ready (Multi-Platform)${RESET}"
 echo -e "${CYAN}=========================================================${RESET}"
 echo ""
 echo -e "  ${BOLD}Provider${RESET} : ${GREEN}${PROVIDER_NAME}${RESET}"
