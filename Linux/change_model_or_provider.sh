@@ -90,8 +90,13 @@ fetch_openrouter_models() {
 }
 
 fetch_nvidia_models() {
+    # Curated models
+    CURATED="moonshotai/kimi-k2-instruct moonshotai/kimi-k2-thinking z-ai/glm4.7 deepseek-ai/deepseek-v3.2 deepseek-ai/deepseek-v3.1-terminus stepfun-ai/step-3.5-flash mistralai/mistral-large-3-675b-instruct-2512 qwen/qwen3-coder-480b-a35b-instruct mistralai/mistral-nemotron bytedance/seed-oss-36b-instruct mistralai/mamba-codestral-7b-v0.1 google/gemma-7b tiiuae/falcon3-7b-instruct minimaxai/minimax-m2.7"
     echo -e "  ${CYAN}--- NVIDIA MODELS ---${RESET} ${DIM}(Fetching...)${RESET}"
-    MODELS=$(curl -sf -H "Authorization: Bearer $OPENAI_API_KEY" https://integrate.api.nvidia.com/v1/models 2>/dev/null | grep -Eo '"id"[[:space:]]*:[[:space:]]*"[^"]*"' | sed -e 's/"id"[[:space:]]*:[[:space:]]*"//g' -e 's/"//g' | head -20)
+    LIVE=$(curl -sf -H "Authorization: Bearer $OPENAI_API_KEY" https://integrate.api.nvidia.com/v1/models 2>/dev/null | grep -Eo '"id"[[:space:]]*:[[:space:]]*"[^"]*"' | sed -e 's/"id"[[:space:]]*:[[:space:]]*"//g' -e 's/"//g' | head -15)
+    MODELS=""
+    for m in $CURATED; do MODELS="${MODELS}${m}"$'\n'; done
+    MODELS="${MODELS}${LIVE}"
     echo "$MODELS"
 }
 
@@ -99,7 +104,7 @@ fetch_nvidia_models() {
 
 echo ""
 echo -e "${CYAN}=========================================================${RESET}"
-echo -e "  ${BOLD}OpenClaude Multi-Platform - Reconfig Tool${RESET}"
+echo -e "  ${BOLD}Claude Code - Open Source Reconfig Tool${RESET}"
 echo -e "${CYAN}=========================================================${RESET}"
 echo ""
 

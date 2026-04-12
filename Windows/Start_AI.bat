@@ -37,7 +37,7 @@ echo !CYAN! / ____/ /_/ / / / /_/ /_/ / /_/ / /  __/  / ___ ^|_/ /   !RESET!
 echo !CYAN!/_/    \____/_/  \__/\__,_/_.___/_/\___/  /_/  ^|_/___/   !RESET!
 echo.
 echo !CYAN!=========================================================!RESET!
-echo   !BOLD!OpenClaude Multi-Platform - Launcher!RESET!
+echo   !BOLD!Claude Code - Open Source Multi-Platform!RESET!
 echo !CYAN!=========================================================!RESET!
 echo.
 
@@ -171,15 +171,16 @@ echo.
 :prompt_free_sel
 set "FREE_SEL="
 set /p "FREE_SEL=  Choose a model !CYAN!(1-!FREE_MAX!)!RESET!: "
-
-if "!FREE_SEL!"=="!FREE_MAX!" (
-    set /p "USER_MODEL=  Enter custom model string: "
-) else (
-    for %%V in (!FREE_SEL!) do set "USER_MODEL=!FREE_MODEL_%%V!"
-    if "!USER_MODEL!"=="" (
-        echo   !RED![ERROR] Invalid selection. Please choose 1 to !FREE_MAX!.!RESET!
-        goto prompt_free_sel
+if defined FREE_SEL (
+    if "!FREE_SEL!"=="!FREE_MAX!" (
+        set /p "USER_MODEL=  Enter custom model string: "
+    ) else (
+        for %%V in (!FREE_SEL!) do set "USER_MODEL=!FREE_MODEL_%%V!"
     )
+)
+if "!USER_MODEL!"=="" (
+    echo   !RED![ERROR] Invalid selection. Please choose 1 to !FREE_MAX!.!RESET!
+    goto prompt_free_sel
 )
 goto save_settings_openrouter
 
@@ -204,16 +205,18 @@ echo.
 :prompt_paid_sel
 set "PAID_SEL="
 set /p "PAID_SEL=  Choose a model !CYAN!(1-!PAID_MAX!)!RESET!: "
-
-if "!PAID_SEL!"=="!PAID_MAX!" (
-    set /p "USER_MODEL=  Enter custom model string: "
-) else (
-    for %%V in (!PAID_SEL!) do set "USER_MODEL=!PAID_MODEL_%%V!"
-    if "!USER_MODEL!"=="" (
-        echo   !RED![ERROR] Invalid selection. Please choose 1 to !PAID_MAX!.!RESET!
-        goto prompt_paid_sel
+if defined PAID_SEL (
+    if "!PAID_SEL!"=="!PAID_MAX!" (
+        set /p "USER_MODEL=  Enter custom model string: "
+    ) else (
+        for %%V in (!PAID_SEL!) do set "USER_MODEL=!PAID_MODEL_%%V!"
     )
 )
+if "!USER_MODEL!"=="" (
+    echo   !RED![ERROR] Invalid selection. Please choose 1 to !PAID_MAX!.!RESET!
+    goto prompt_paid_sel
+)
+goto save_settings_openrouter
 
 :save_settings_openrouter
 (
@@ -252,12 +255,29 @@ if errorlevel 1 (
 )
 echo   !GREEN![OK] Key Verified!!RESET!
 echo.
-echo   !CYAN!--- NVIDIA MODELS ---!RESET! !DIM!(Live Fetching...)!RESET!
+echo   !CYAN!--- NVIDIA MODELS ---!RESET! !DIM!(Live + Curated)!RESET!
 set "idx=1"
-for /f "delims=" %%I in ('powershell -NoProfile -Command "$headers = @{ 'Authorization' = 'Bearer !USER_API_KEY!' }; $d = (Invoke-RestMethod -Uri 'https://integrate.api.nvidia.com/v1/models' -Headers $headers).data; $d | Select-Object -First 20 -ExpandProperty id"') do (
-    set "NVIDIA_MODEL_!idx!=%%I"
-    echo   !CYAN!!idx!^)!RESET! %%I
+for %%M in (
+    "moonshotai/kimi-k2-instruct" "moonshotai/kimi-k2-thinking" "z-ai/glm4.7"
+    "deepseek-ai/deepseek-v3.2" "deepseek-ai/deepseek-v3.1-terminus" "stepfun-ai/step-3.5-flash"
+    "mistralai/mistral-large-3-675b-instruct-2512" "qwen/qwen3-coder-480b-a35b-instruct"
+    "mistralai/mistral-nemotron" "bytedance/seed-oss-36b-instruct" "mistralai/mamba-codestral-7b-v0.1"
+    "google/gemma-7b" "tiiuae/falcon3-7b-instruct" "minimaxai/minimax-m2.7"
+) do (
+    set "NVIDIA_MODEL_!idx!=%%~M"
+    echo   !CYAN!!idx!^)!RESET! %%~M
     set /a "idx+=1"
+)
+for /f "delims=" %%I in ('powershell -NoProfile -Command "$headers = @{ 'Authorization' = 'Bearer !USER_API_KEY!' }; try { $d = (Invoke-RestMethod -Uri 'https://integrate.api.nvidia.com/v1/models' -Headers $headers).data; $d | Select-Object -ExpandProperty id | Select-Object -First 15 } catch { }"') do (
+    set "EXISTS=0"
+    for /L %%K in (1,1,14) do (
+        if "%%I"=="!NVIDIA_MODEL_%%K!" set "EXISTS=1"
+    )
+    if !EXISTS!==0 (
+        set "NVIDIA_MODEL_!idx!=%%I"
+        echo   !CYAN!!idx!^)!RESET! %%I
+        set /a "idx+=1"
+    )
 )
 if "!idx!"=="1" (
     echo   !YELLOW![API Error] Could not fetch models, using fallback...!RESET!
@@ -265,21 +285,22 @@ if "!idx!"=="1" (
     echo   !CYAN!1^)!RESET! meta/llama-3.1-70b-instruct
     set /a "idx=2"
 )
-set "NVIDIA_MAX=!idx!"
-echo   !CYAN!!NVIDIA_MAX!^)!RESET! !DIM!Custom NVIDIA Model...!RESET!
+set "MAX_IDX=!idx!"
+echo   !CYAN!!MAX_IDX!^)!RESET! !DIM!Custom NVIDIA Model...!RESET!
 echo.
 :prompt_nvidia_sel
-set "NVIDIA_SEL="
-set /p "NVIDIA_SEL=  Choose a model !CYAN!(1-!NVIDIA_MAX!)!RESET!: "
-
-if "!NVIDIA_SEL!"=="!NVIDIA_MAX!" (
-    set /p "USER_MODEL=  Enter custom model string: "
-) else (
-    for %%V in (!NVIDIA_SEL!) do set "USER_MODEL=!NVIDIA_MODEL_%%V!"
-    if "!USER_MODEL!"=="" (
-        echo   !RED![ERROR] Invalid selection. Please choose 1 to !NVIDIA_MAX!.!RESET!
-        goto prompt_nvidia_sel
+set "MODEL_SEL="
+set /p "MODEL_SEL=  Choose a model !CYAN!(1-!MAX_IDX!)!RESET!: "
+if defined MODEL_SEL (
+    if "!MODEL_SEL!"=="!MAX_IDX!" (
+        set /p "USER_MODEL=  Enter custom model string: "
+    ) else (
+        for %%V in (!MODEL_SEL!) do set "USER_MODEL=!NVIDIA_MODEL_%%V!"
     )
+)
+if "!USER_MODEL!"=="" (
+    echo   !RED![ERROR] Invalid selection. Please choose 1 to !MAX_IDX!.!RESET!
+    goto prompt_nvidia_sel
 )
 
 :save_settings_nvidia
@@ -446,7 +467,7 @@ if "!AI_PROVIDER!"=="ollama" set "PROVIDER_NAME=Ollama (Local)"
 title Portable AI USB - !PROVIDER_NAME! - !AI_DISPLAY_MODEL!
 
 echo !CYAN!=========================================================!RESET!
-echo   !BOLD!OpenClaude Multi-Platform - Ready!RESET!
+echo   !BOLD!Claude Code - Ready (Multi-Platform)!RESET!
 echo !CYAN!=========================================================!RESET!
 echo.
 echo   !BOLD!Provider!RESET! : !GREEN!!PROVIDER_NAME!!RESET!
