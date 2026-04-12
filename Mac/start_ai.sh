@@ -66,19 +66,25 @@ fi
 echo ""
 
 # ─── Check for settings ─────────────────────────────────────
-if [ -f "$ENV_FILE" ] && grep -q "AI_PROVIDER=" "$ENV_FILE" 2>/dev/null; then
-    # Load settings
-    while IFS='=' read -r key value; do
-        [[ "$key" =~ ^#.* ]] && continue
-        [ -z "$key" ] && continue
-        export "$key=$value"
-    done < "$ENV_FILE"
-    goto_loaded=1
-else
-    goto_loaded=0
+goto_loaded=0
+if [ -f "$ENV_FILE" ]; then
+    ENV_CONTENT="$(cat "$ENV_FILE" 2>/dev/null || true)"
+    if [[ "$ENV_CONTENT" == *"AI_PROVIDER="* ]]; then
+        # Load settings
+        while IFS='=' read -r key value; do
+            [[ "$key" =~ ^#.* ]] && continue
+            [ -z "$key" ] && continue
+            export "$key=$value"
+        done <<< "$ENV_CONTENT"
+        goto_loaded=1
+    fi
 fi
 
 # ─── Provider Setup ────────────────────────────────────────
+save_env() {
+    echo "$1" > "$ENV_FILE"
+}
+
 setup_provider() {
     echo -e "${CYAN}=========================================================${RESET}"
     echo -e "  ${BOLD}AI PROVIDER SELECTION${RESET}"
@@ -143,10 +149,10 @@ setup_openrouter() {
 
     if [ "$MODEL_TIER" = "1" ]; then
         echo -e "  ${CYAN}--- FREE MODELS ---${RESET} ${DIM}(Fetching...)${RESET}"
-        MODELS=$(curl -sf https://openrouter.ai/api/v1/models 2>/dev/null | grep -oP '"id"\s*:\s*"[^"]*:free"' | sed 's/"id"\s*:\s*"//;s/"//' | head -20)
+        MODELS=$(curl -sf https://openrouter.ai/api/v1/models 2>/dev/null | grep -Eo '"id"[[:space:]]*:[[:space:]]*"[^"]*:free"' | sed -e 's/"id"[[:space:]]*:[[:space:]]*"//g' -e 's/"//g' | head -20)
     else
         echo -e "  ${CYAN}--- PAID MODELS ---${RESET} ${DIM}(Fetching...)${RESET}"
-        MODELS=$(curl -sf https://openrouter.ai/api/v1/models 2>/dev/null | grep -oP '"id"\s*:\s*"[^"]*"' | sed 's/"id"\s*:\s*"//;s/"//' | grep -v ':free$' | head -20)
+        MODELS=$(curl -sf https://openrouter.ai/api/v1/models 2>/dev/null | grep -Eo '"id"[[:space:]]*:[[:space:]]*"[^"]*"' | sed -e 's/"id"[[:space:]]*:[[:space:]]*"//g' -e 's/"//g' | grep -v ':free$' | head -20)
     fi
 
     if [ -z "$MODELS" ]; then
@@ -169,8 +175,7 @@ setup_openrouter() {
         fi
     fi
 
-    cat > "$ENV_FILE" << EOF
-# ========================================================
+    save_env "# ========================================================
 # Portable AI - Master Switchboard
 # ========================================================
 AI_PROVIDER=openai
@@ -178,8 +183,7 @@ CLAUDE_CODE_USE_OPENAI=1
 OPENAI_API_KEY=${USER_API_KEY}
 OPENAI_BASE_URL=https://openrouter.ai/api/v1
 OPENAI_MODEL=${USER_MODEL}
-AI_DISPLAY_MODEL=${USER_MODEL}
-EOF
+AI_DISPLAY_MODEL=${USER_MODEL}"
 }
 
 setup_gemini() {
@@ -198,11 +202,9 @@ setup_gemini() {
     echo ""
     read -p "  Enter Model (Enter for gemini-2.0-pro-exp-02-05): " USER_MODEL
     [ -z "$USER_MODEL" ] && USER_MODEL="gemini-2.0-pro-exp-02-05"
-    cat > "$ENV_FILE" << EOF
-AI_PROVIDER=gemini
+    save_env "AI_PROVIDER=gemini
 GEMINI_API_KEY=${USER_API_KEY}
-AI_DISPLAY_MODEL=${USER_MODEL}
-EOF
+AI_DISPLAY_MODEL=${USER_MODEL}"
 }
 
 setup_claude() {
@@ -221,11 +223,9 @@ setup_claude() {
     echo ""
     read -p "  Enter Model (Enter for claude-3-7-sonnet-20250219): " USER_MODEL
     [ -z "$USER_MODEL" ] && USER_MODEL="claude-3-7-sonnet-20250219"
-    cat > "$ENV_FILE" << EOF
-AI_PROVIDER=anthropic
+    save_env "AI_PROVIDER=anthropic
 ANTHROPIC_API_KEY=${USER_API_KEY}
-AI_DISPLAY_MODEL=${USER_MODEL}
-EOF
+AI_DISPLAY_MODEL=${USER_MODEL}"
 }
 
 setup_ollama() {
@@ -234,14 +234,12 @@ setup_ollama() {
     echo ""
     read -p "  Enter local model (Enter for llama3.2:3b): " USER_MODEL
     [ -z "$USER_MODEL" ] && USER_MODEL="llama3.2:3b"
-    cat > "$ENV_FILE" << EOF
-AI_PROVIDER=ollama
+    save_env "AI_PROVIDER=ollama
 CLAUDE_CODE_USE_OPENAI=1
 OPENAI_API_KEY=ollama
 OPENAI_BASE_URL=http://localhost:11434/v1
 OPENAI_MODEL=${USER_MODEL}
-AI_DISPLAY_MODEL=${USER_MODEL}
-EOF
+AI_DISPLAY_MODEL=${USER_MODEL}"
 }
 
 setup_openai() {
@@ -260,14 +258,12 @@ setup_openai() {
     echo ""
     read -p "  Enter Model (Enter for gpt-4o): " USER_MODEL
     [ -z "$USER_MODEL" ] && USER_MODEL="gpt-4o"
-    cat > "$ENV_FILE" << EOF
-AI_PROVIDER=openai
+    save_env "AI_PROVIDER=openai
 CLAUDE_CODE_USE_OPENAI=1
 OPENAI_API_KEY=${USER_API_KEY}
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL=${USER_MODEL}
-AI_DISPLAY_MODEL=${USER_MODEL}
-EOF
+AI_DISPLAY_MODEL=${USER_MODEL}"
 }
 
 # ─── Main Flow ──────────────────────────────────────────────
@@ -277,11 +273,12 @@ if [ "$goto_loaded" -eq 0 ]; then
     echo -e "  ${GREEN}[OK] Settings saved!${RESET}"
     echo ""
     # Reload
+    ENV_CONTENT="$(cat "$ENV_FILE" 2>/dev/null || true)"
     while IFS='=' read -r key value; do
         [[ "$key" =~ ^#.* ]] && continue
         [ -z "$key" ] && continue
         export "$key=$value"
-    done < "$ENV_FILE"
+    done <<< "$ENV_CONTENT"
 fi
 
 # ─── Friendly Provider Name ────────────────────────────────
@@ -342,4 +339,11 @@ PROVIDER_ARGS=""
 [ -n "$AI_PROVIDER" ] && PROVIDER_ARGS="--provider $AI_PROVIDER"
 
 cd "$BIN_DIR"
-npx openclaude $PROVIDER_ARGS $CMD_ARGS
+
+# Use portable binary directly (not npx) to avoid conflicts with system-installed claude
+OC_BIN="$BIN_DIR/node_modules/.bin/openclaude"
+if [ -f "$OC_BIN" ]; then
+    "$NODE_DIR/bin/node" "$BIN_DIR/node_modules/@gitlawb/openclaude/bin/openclaude" $PROVIDER_ARGS $CMD_ARGS
+else
+    npx openclaude $PROVIDER_ARGS $CMD_ARGS
+fi

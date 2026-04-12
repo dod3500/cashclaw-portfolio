@@ -22,19 +22,22 @@ echo ""
 
 # Show current config
 if [ -f "$ENV_FILE" ]; then
-    echo -e "  ${BOLD}Current Configuration:${RESET}"
-    echo -e "  ${CYAN}-------------------------------------------------${RESET}"
-    while IFS='=' read -r key value; do
-        [[ "$key" =~ ^#.* ]] && continue
-        [ -z "$key" ] && continue
-        # Mask API keys
-        case "$key" in
-            *API_KEY*) [ ${#value} -gt 10 ] && value="${value:0:6}****${value: -4}" ;;
-        esac
-        echo -e "  ${DIM}${key}${RESET} = ${GREEN}${value}${RESET}"
-    done < "$ENV_FILE"
-    echo -e "  ${CYAN}-------------------------------------------------${RESET}"
-    echo ""
+    ENV_CONTENT="$(cat "$ENV_FILE" 2>/dev/null || true)"
+    if [ -n "$ENV_CONTENT" ]; then
+        echo -e "  ${BOLD}Current Configuration:${RESET}"
+        echo -e "  ${CYAN}-------------------------------------------------${RESET}"
+        while IFS='=' read -r key value; do
+            [[ "$key" =~ ^#.* ]] && continue
+            [ -z "$key" ] && continue
+            # Mask API keys
+            case "$key" in
+                *API_KEY*) [ ${#value} -gt 10 ] && value="${value:0:6}****${value: -4}" ;;
+            esac
+            echo -e "  ${DIM}${key}${RESET} = ${GREEN}${value}${RESET}"
+        done <<< "$ENV_CONTENT"
+        echo -e "  ${CYAN}-------------------------------------------------${RESET}"
+        echo ""
+    fi
 fi
 
 read -p "  Reset configuration? (Y/N): " CONFIRM
@@ -55,6 +58,6 @@ else
     echo ""
 fi
 
-echo -e "  ${CYAN}[~] Launching setup...${RESET}"
+echo "  To pick a new model, type this in your terminal:"
+echo -e "  ${GREEN}${BOLD}bash start_ai.sh${RESET}"
 echo ""
-exec bash "$SCRIPT_DIR/start_ai.sh"

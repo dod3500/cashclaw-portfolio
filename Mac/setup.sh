@@ -13,6 +13,9 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 BIN_DIR="$SCRIPT_DIR/bin"
 DATA_DIR="$ROOT_DIR/data"
 
+# Clear macOS quarantine on all scripts (needed when downloaded from internet)
+xattr -cr "$SCRIPT_DIR" 2>/dev/null || true
+
 echo ""
 echo -e "${CYAN}    ____            __        __    __        ___    ____${RESET}"
 echo -e "${CYAN}   / __ \\____  ____/ /_____ _/ /_  / /__     /   |  /  _/${RESET}"
@@ -95,6 +98,11 @@ else
     rm -f "$BIN_DIR/$NODE_TARBALL"
 
     [ ! -f "$NODE_DIR/bin/node" ] && echo -e "  ${RED}[FATAL] Extraction failed!${RESET}" && exit 1
+
+    # Clear macOS quarantine flags
+    echo -e "  ${CYAN}  Removing macOS quarantine flags...${RESET}"
+    xattr -cr "$BIN_DIR" 2>/dev/null || true
+
     echo -e "  ${GREEN}  [OK] Node.js installed successfully!${RESET}"
 fi
 STEP=$((STEP+1)); echo ""
@@ -127,9 +135,7 @@ echo -e "  ${CYAN}-------------------------------------------------${RESET}"
 echo -e "  Total Size   : ${YELLOW}${BIN_SIZE} MB${RESET}"
 echo ""
 
-read -p "  Launch start_ai.sh now? (Y/N): " LAUNCH_NOW
-if [[ "$LAUNCH_NOW" =~ ^[Yy]$ ]]; then
-    exec bash "$SCRIPT_DIR/start_ai.sh"
-else
-    echo -e "  ${GREEN}All done! Run './start_ai.sh' whenever you're ready.${RESET}"
-fi
+echo ""
+echo -e "  To launch the AI, type this in the terminal and press Enter:"
+echo -e "  ${GREEN}${BOLD}bash start_ai.sh${RESET}"
+echo ""

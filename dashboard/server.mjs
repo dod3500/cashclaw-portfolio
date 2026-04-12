@@ -377,9 +377,15 @@ async function callAI_OpenAI(messages, cfg, includeTools = true) {
         headers['X-Title'] = 'Portable AI Agent';
     }
     const resp = await fetchExternal(`${baseUrl}/chat/completions`, headers, body, 'POST');
-    const data = JSON.parse(resp.data);
+    let data;
+    try { data = JSON.parse(resp.data); } catch { throw new Error('Invalid response from AI API: ' + resp.data.slice(0, 300)); }
+    // Check for API-level error
+    if (data.error) {
+        const errMsg = data.error.message || data.error.code || JSON.stringify(data.error);
+        throw new Error(`API Error: ${errMsg}`);
+    }
     const choice = data.choices?.[0]?.message;
-    if (!choice) throw new Error('No response from AI: ' + resp.data.slice(0, 200));
+    if (!choice) throw new Error('No response from AI: ' + resp.data.slice(0, 300));
     return {
         content: choice.content || '',
         toolCalls: (choice.tool_calls || []).map(tc => ({
@@ -554,8 +560,21 @@ async function runAgent(allMessages, cfg, mode, sendSSE) {
         try {
             aiResponse = await callAI(allMessages, cfg, true);
         } catch (e) {
-            sendSSE({ type: 'agent_error', error: e.message });
-            return '';
+            // If tools failed, try once without tools as fallback
+            if (iter === 0) {
+                try {
+                    sendSSE({ type: 'agent_reasoning', content: 'Tool calling not supported by this model, falling back to chat mode...', iteration: 1 });
+                    aiResponse = await callAI(allMessages, cfg, false);
+                } catch (e2) {
+                    const errText = `⚠️ Agent Error: ${e2.message}`;
+                    sendSSE({ type: 'agent_error', error: e2.message });
+                    return errText;
+                }
+            } else {
+                const errText = `⚠️ Agent Error: ${e.message}`;
+                sendSSE({ type: 'agent_error', error: e.message });
+                return errText;
+            }
         }
 
         // If AI returned reasoning text alongside tool calls, send as thinking
@@ -774,7 +793,7 @@ const server = createServer(async (req, res) => {
                 const batFile = join(ROOT_DIR, 'Windows', 'Start_AI.bat');
                 exec(`start cmd /k "${batFile}"${quickFlag}`, { cwd: join(ROOT_DIR, 'Windows') });
             } else {
-                const shFile = join(ROOT_DIR, PLATFORM_DIR, 'start_ai.sh');
+                const shFile = join(ROOT_DIR, PLATFORM_DIR, PLATFORM_DIR === 'Mac' ? 'Start_AI.command' : 'start_ai.sh');
                 exec(`bash "${shFile}"${quickFlag}`, { cwd: join(ROOT_DIR, PLATFORM_DIR) });
             }
             return sendJSON(res, 200, { success: true });
@@ -822,6 +841,11 @@ const server = createServer(async (req, res) => {
                 if (existsSync(file)) { unlinkSync(file); }
                 return sendJSON(res, 200, { success: true });
             }
+            if (req.method === 'POST') {
+                const data = await readBody(req);
+                saveChat(chatId, data);
+                return sendJSON(res, 200, { success: true });
+            }
         }
 
         // ── Agent Endpoint (NEW) ─────────────────────────────
@@ -849,7 +873,7 @@ const server = createServer(async (req, res) => {
             try {
                 const fullText = await runAgent(allMessages, cfg, mode, sendSSE);
 
-                // Save to chat history
+                // Save to chat history (save even if it's an error message)
                 if (chatId && fullText) {
                     const existing = loadChat(chatId) || { id: chatId, title: userMessage.slice(0, 50), created: new Date().toISOString(), messages: [] };
                     existing.messages.push({ role: 'user', content: userMessage }, { role: 'assistant', content: fullText });
@@ -858,7 +882,16 @@ const server = createServer(async (req, res) => {
                     saveChat(chatId, existing);
                 }
             } catch (e) {
+                const errText = `⚠️ Agent Error: ${e.message}`;
                 sendSSE({ type: 'agent_error', error: e.message });
+                // Save the error to chat history too
+                if (chatId) {
+                    const existing = loadChat(chatId) || { id: chatId, title: userMessage.slice(0, 50), created: new Date().toISOString(), messages: [] };
+                    existing.messages.push({ role: 'user', content: userMessage }, { role: 'assistant', content: errText });
+                    existing.updated = new Date().toISOString();
+                    if (!existing.title || existing.title === 'New Conversation') existing.title = userMessage.slice(0, 50);
+                    saveChat(chatId, existing);
+                }
             }
             return res.end();
         }
