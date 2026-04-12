@@ -39,8 +39,7 @@ chmod +x *.sh
 ### macOS
 ```bash
 cd Portable_AI_USB/Mac
-chmod +x *.sh
-./setup_first_time.sh
+bash setup.sh
 ```
 
 > **First-time setup requires internet** to download Node.js (~25MB) and the AI engine (~5MB).  
@@ -78,10 +77,10 @@ Portable_AI_USB/
 │   └── bin/                   (created by setup)
 │
 ├── 📂 Mac/                ← macOS scripts
-│   ├── setup_first_time.sh
+│   ├── setup.sh
 │   ├── start_ai.sh
 │   ├── open_dashboard.sh
-│   ├── change_model_or_provider.sh
+│   ├── change_model.sh
 │   ├── uninstall.sh
 │   └── bin/                   (created by setup)
 │
@@ -135,7 +134,7 @@ Launch it:
 ```
 Windows:  Open_Dashboard.bat
 Linux:    ./open_dashboard.sh
-macOS:    ./open_dashboard.sh
+macOS:    bash open_dashboard.sh
 ```
 Then open **http://localhost:3000** in your browser.
 

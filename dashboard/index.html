@@ -604,15 +604,18 @@ const defaults = { gemini:'gemini-2.0-pro-exp-02-05', anthropic:'claude-3-7-sonn
 const providerNames = { openrouter:'OpenRouter', gemini:'Gemini', anthropic:'Claude', ollama:'Ollama', openai:'OpenAI' };
 
 // ─── Init ────────────────────────────────────────────────────
-(function init() {
+(async function init() {
   const saved = localStorage.getItem('theme');
   if (saved) document.documentElement.dataset.theme = saved;
   loadConfig();
-  loadChatList();
+  await loadChatList();
   initScrollTracking();
   loadWorkDir();
   const savedAgent = localStorage.getItem('agentMode');
   if (savedAgent === 'true') { agentMode = true; document.getElementById('agentToggle').checked = true; document.getElementById('workdirBar').style.display = 'flex'; }
+  // Restore last active chat on refresh
+  const lastChatId = localStorage.getItem('activeChatId');
+  if (lastChatId) { try { await openChatById(lastChatId); } catch {} }
 })();
 
 async function loadConfig() {
@@ -711,7 +714,9 @@ async function openChatById(id) {
   try {
     const res = await fetch(`${API}/api/chats/${id}`);
     const chat = await res.json();
+    if (chat.error) { localStorage.removeItem('activeChatId'); return; }
     currentChatId = id;
+    localStorage.setItem('activeChatId', id);
     chatMessages = chat.messages || [];
     renderMessages(chatMessages);
     document.getElementById('topbarTitle').textContent = chat.title;
@@ -742,6 +747,7 @@ async function executeDelete() {
     if (data.success) {
       if (currentChatId === id) {
         currentChatId = null;
+        localStorage.removeItem('activeChatId');
         chatMessages = [];
         document.getElementById('messages').innerHTML = '';
         document.getElementById('messages').style.display = 'none';
@@ -766,6 +772,7 @@ async function startNewChat() {
     const res = await fetch(`${API}/api/chats`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ title:'New Conversation' }) });
     const { id } = await res.json();
     currentChatId = id;
+    localStorage.setItem('activeChatId', id);
     chatMessages = [];
     document.getElementById('messages').innerHTML = '';
     document.getElementById('messages').style.display = 'none';
@@ -855,6 +862,20 @@ async function sendMessage() {
   appendMessage({ role: 'user', content: text });
   scrollToBottom();
 
+  // Save user message immediately so it persists even if AI response fails
+  if (currentChatId) {
+    try {
+      const existing = await fetch(`${API}/api/chats/${currentChatId}`).then(r => r.json());
+      if (existing && !existing.error) {
+        existing.messages = existing.messages || [];
+        existing.messages.push({ role: 'user', content: text });
+        existing.updated = new Date().toISOString();
+        if (!existing.title || existing.title === 'New Conversation') existing.title = text.slice(0, 50);
+        await fetch(`${API}/api/chats/${currentChatId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(existing) }).catch(() => {});
+      }
+    } catch {}
+  }
+
   const typingEl = document.createElement('div');
   typingEl.className = 'message';
   typingEl.innerHTML = `<div class="msg-avatar ai">AI</div><div class="msg-body"><div class="msg-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`;
@@ -911,7 +932,10 @@ async function sendChatMessage(text, typingEl) {
             loadChatList();
           } else if (data.type === 'error') {
             typingEl.remove();
-            appendMessage({ role: 'assistant', content: `⚠️ Error: ${data.content}` });
+            const errMsg = `⚠️ Error: ${data.content}`;
+            appendMessage({ role: 'assistant', content: errMsg });
+            chatMessages.push({ role: 'assistant', content: errMsg });
+            loadChatList();
           }
         } catch {}
       }
@@ -1049,7 +1073,10 @@ async function sendAgentMessage(text, typingEl) {
             scrollToBottom();
           } else if (data.type === 'agent_error') {
             if (thinkingEl) thinkingEl.remove();
-            appendMessage({ role: 'assistant', content: `⚠️ Agent Error: ${data.error}` });
+            const errMsg = `⚠️ Agent Error: ${data.error}`;
+            appendMessage({ role: 'assistant', content: errMsg });
+            chatMessages.push({ role: 'assistant', content: errMsg });
+            loadChatList();
           } else if (data.type === 'done') {
             // Finalize thinking
             if (thinkingEl) {
