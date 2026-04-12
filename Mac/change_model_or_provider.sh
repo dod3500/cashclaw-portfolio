@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════
-#  Portable AI USB - Change Model/Provider (Linux)
+#  Portable AI USB - Change Model/Provider (macOS)
 # ═══════════════════════════════════════════════════════════
 
 CYAN='\033[36m'; GREEN='\033[32m'; YELLOW='\033[33m'; RED='\033[31m'
@@ -61,7 +61,7 @@ EOF
 
     # Add provider-specific keys
     case "$AI_PROVIDER" in
-        openai|ollama|nvidia)
+        openai|nvidia)
             echo "CLAUDE_CODE_USE_OPENAI=$CLAUDE_CODE_USE_OPENAI" >> "$ENV_FILE"
             echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> "$ENV_FILE"
             echo "OPENAI_BASE_URL=$OPENAI_BASE_URL" >> "$ENV_FILE"
@@ -72,6 +72,12 @@ EOF
             ;;
         anthropic)
             echo "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY" >> "$ENV_FILE"
+            ;;
+        ollama)
+            echo "CLAUDE_CODE_USE_OPENAI=$CLAUDE_CODE_USE_OPENAI" >> "$ENV_FILE"
+            echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> "$ENV_FILE"
+            echo "OPENAI_BASE_URL=$OPENAI_BASE_URL" >> "$ENV_FILE"
+            echo "OPENAI_MODEL=$OPENAI_MODEL" >> "$ENV_FILE"
             ;;
     esac
     echo -e "  ${GREEN}[OK] Configuration updated successfully!${RESET}"
@@ -204,8 +210,8 @@ case "$OPTION" in
         fi
         case "$AI_PROVIDER" in
             openai|ollama|nvidia) OPENAI_API_KEY="$NEW_KEY" ;;
-            gemini)        GEMINI_API_KEY="$NEW_KEY" ;;
-            anthropic)     ANTHROPIC_API_KEY="$NEW_KEY" ;;
+            gemini)               GEMINI_API_KEY="$NEW_KEY" ;;
+            anthropic)            ANTHROPIC_API_KEY="$NEW_KEY" ;;
         esac
         save_config
         ;;

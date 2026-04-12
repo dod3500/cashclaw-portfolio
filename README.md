@@ -1,22 +1,24 @@
-# 🚀 Portable AI USB
+# 🚀 OpenClaude Multi-Platform
 
+> **The Open Source Claude Code is here, running on Windows, Linux, and macOS.**  
 > **Run powerful AI coding agents from any computer — no installation required.**  
-> Plug in. Launch. Code. Works on Windows, Linux, and macOS.
+> Plug in. Launch. Code. 
 
 ---
 
 ## 📦 What's Inside
 
-This is a fully portable, zero-footprint AI coding environment that runs directly from a USB drive (or any folder). It bundles everything — Node.js runtime, AI engine, and a web dashboard — so you never install anything on the host computer.
+**OpenClaude Multi-Platform** is the professional-grade, **open source Claude Code** alternative designed for the modern developer. It provides a fully portable, zero-footprint AI coding environment that runs directly from any folder or USB drive. 
 
-### Features
-- 🤖 **5 AI Providers** — OpenRouter (200+ models), Gemini, Claude, OpenAI, Ollama (offline)
-- 🌐 **Web Dashboard** — ChatGPT-style interface with agent mode, tool execution, and thinking visualization
-- 🔧 **Coding Agent** — Creates files, runs commands, searches code, reads files — autonomously
-- 🔒 **Zero Footprint** — Nothing touches the host PC. All data stays on the USB
-- 🔄 **Cross-Platform Settings** — Configure on Windows, plug into Linux — it just works
-- ⚡ **Limitless Mode** — Full autonomous execution with no confirmations
+By bundling a pre-configured Node.js runtime, high-performance AI engines, and an advanced web dashboard, it delivers a seamless **multi-platform** experience across Windows, Linux, and macOS without ever touching the host system's global configuration.
 
+### 🌟 Key Features
+- 🤖 **6 Elite AI Providers** — Integrated support for NVIDIA NIM (Free), OpenRouter, Google Gemini, Anthropic Claude, OpenAI, and Ollama (Local/Offline).
+- 🌐 **Advanced Web Dashboard** — A premium, ChatGPT-style interface featuring autonomous agent modes, tool execution, and thinking process visualization.
+- 🔧 **Autonomous Coding Agent** — A powerful **open source Claude Code** engine that performs file operations, executes shell commands, and analyzes codebases independently.
+- 🔒 **Privacy-First (Zero Footprint)** — Absolute portability. No host system leaks; all session data, logs, and API keys remain encrypted on your portable drive.
+- 🔄 **Unified Cross-Platform Config** — Configure your settings once and deploy instantly on any operating system — it just works.
+- ⚡ **Limitless Agentic Mode** — Optional high-autonomy mode for rapid, hands-free development and complex task execution.
 ---
 
 ## ⚡ Quick Start
@@ -80,7 +82,7 @@ Portable_AI_USB/
 │   ├── setup.sh
 │   ├── start_ai.sh
 │   ├── open_dashboard.sh
-│   ├── change_model.sh
+│   ├── change_model_or_provider.sh
 │   ├── uninstall.sh
 │   └── bin/                   (created by setup)
 │
@@ -99,18 +101,12 @@ Portable_AI_USB/
 | **Change_Model_or_Provider** | Menu to change model, change API key, or full reset config |
 | **Uninstall** | Removes engine (bin/) and optionally all data (settings + chats) |
 
-### Command-Line Flags (Start_AI)
-```
---quick     Skip menus, launch in Limitless mode instantly
---offline   Skip engine update check
-```
-
----
 
 ## 🌐 Supported AI Providers
 
 | Provider | Free? | Setup |
 |----------|-------|-------|
+| **NVIDIA NIM** | ✅ Free tier (1000 credits) | Get API key at [build.nvidia.com](https://build.nvidia.com) |
 | **OpenRouter** | ✅ Free + Paid models | Get API key at [openrouter.ai](https://openrouter.ai) |
 | **Google Gemini** | ✅ Free tier available | Get API key at [aistudio.google.com](https://aistudio.google.com) |
 | **Anthropic Claude** | ❌ Paid only | Get API key at [console.anthropic.com](https://console.anthropic.com) |

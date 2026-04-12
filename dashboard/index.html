@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portable AI — Dashboard</title>
+<title>OpenClaude Multi-Platform — Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -352,7 +352,7 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
   <!-- ─── Sidebar ─────────────────────────────────────────── -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <div class="logo">Portable <span>AI</span></div>
+      <div class="logo">OpenClaude <span>Multi-Platform</span></div>
       <button class="topbar-toggle" onclick="toggleSidebar()" title="Close sidebar">✕</button>
     </div>
 
@@ -378,7 +378,7 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
     <!-- Top Bar -->
     <div class="topbar">
       <button class="topbar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">☰</button>
-      <div class="topbar-title" id="topbarTitle">Portable AI</div>
+      <div class="topbar-title" id="topbarTitle">OpenClaude Multi-Platform</div>
       <div class="topbar-actions">
         <button class="topbar-btn active" id="tabChat" onclick="switchPage('chat')">💬 <span>Chat</span></button>
         <button class="topbar-btn" id="tabSetup" onclick="switchPage('setup')">⚙️ <span>Setup</span></button>
@@ -458,6 +458,7 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
             <h2>Select AI Provider</h2><p class="subtitle">Choose where your AI requests will be routed</p>
             <div class="provider-grid">
               <div class="provider-option" data-provider="openrouter" onclick="selectProvider(this)"><div class="icon">🌐</div><div class="name">OpenRouter</div><div class="desc">200+ models</div></div>
+              <div class="provider-option" data-provider="nvidia" onclick="selectProvider(this)"><div class="icon">🟢</div><div class="name">NVIDIA NIM</div><div class="desc">Free GPU AI</div></div>
               <div class="provider-option" data-provider="gemini" onclick="selectProvider(this)"><div class="icon">💎</div><div class="name">Gemini</div><div class="desc">Google API</div></div>
               <div class="provider-option" data-provider="anthropic" onclick="selectProvider(this)"><div class="icon">🧠</div><div class="name">Claude</div><div class="desc">Anthropic API</div></div>
               <div class="provider-option" data-provider="ollama" onclick="selectProvider(this)"><div class="icon">🖥️</div><div class="name">Ollama</div><div class="desc">Local</div></div>
@@ -523,6 +524,13 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
             <div class="sys-item"><div class="sys-label">Git</div><div class="sys-val" id="sysGit">—</div></div>
             <div class="sys-item"><div class="sys-label">Python</div><div class="sys-val" id="sysPython">—</div></div>
           </div>
+        </div>
+        <div class="card" id="cardOllama" style="display:none"><h2>Local AI (Ollama)</h2><p class="subtitle">Manage portable Ollama engine</p>
+          <div class="sys-grid">
+            <div class="sys-item"><div class="sys-label">Status</div><div class="sys-val" id="sysOllamaStatus">—</div></div>
+            <div class="sys-item"><div class="sys-label">Actions</div><div class="sys-val" style="display:flex;gap:8px;margin-top:2px" id="sysOllamaActions"></div></div>
+          </div>
+          <div id="sysOllamaModels" style="margin-top:14px;font-size:0.82rem;color:var(--text2);line-height:1.6"></div>
         </div>
         <div class="card"><h2>Storage</h2><p class="subtitle">Drive usage</p>
           <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:3px"><span id="diskUsed">—</span><span id="diskTotal">—</span></div>
@@ -600,8 +608,8 @@ let currentMode = 'normal';
 let modeLocked = false;
 let agentMode = false;
 let workDir = '';
-const defaults = { gemini:'gemini-2.0-pro-exp-02-05', anthropic:'claude-3-7-sonnet-20250219', ollama:'llama3.2:3b', openai:'gpt-4o' };
-const providerNames = { openrouter:'OpenRouter', gemini:'Gemini', anthropic:'Claude', ollama:'Ollama', openai:'OpenAI' };
+const defaults = { gemini:'gemini-2.0-pro-exp-02-05', anthropic:'claude-3-7-sonnet-20250219', ollama:'llama3.2:3b', openai:'gpt-4o', nvidia:'meta/llama-3.1-70b-instruct' };
+const providerNames = { openrouter:'OpenRouter', gemini:'Gemini', anthropic:'Claude', ollama:'Ollama', openai:'OpenAI', nvidia:'NVIDIA NIM' };
 
 // ─── Init ────────────────────────────────────────────────────
 (async function init() {
@@ -625,7 +633,10 @@ async function loadConfig() {
     const isConfigured = !!cfg.AI_PROVIDER;
     document.getElementById('noConfigBanner').style.display = isConfigured ? 'none' : 'flex';
 
-    const pName = cfg.AI_PROVIDER === 'openai' && cfg.OPENAI_BASE_URL?.includes('openrouter') ? 'OpenRouter' : providerNames[cfg.AI_PROVIDER] || cfg.AI_PROVIDER || '—';
+    const pName = cfg.AI_PROVIDER === 'openai' && cfg.OPENAI_BASE_URL?.includes('openrouter') ? 'OpenRouter' : 
+                  cfg.AI_PROVIDER === 'openai' && cfg.OPENAI_BASE_URL?.includes('integrate.api.nvidia.com') ? 'NVIDIA NIM' : 
+                  cfg.AI_PROVIDER === 'ollama' ? 'Local AI' :
+                  providerNames[cfg.AI_PROVIDER] || cfg.AI_PROVIDER || '—';
     const model = cfg.AI_DISPLAY_MODEL || cfg.OPENAI_MODEL || '—';
 
     document.getElementById('sbProvider').textContent = pName;
@@ -1323,11 +1334,44 @@ function showKeyStatus(html,type){
 
 async function initModelStep(){
   const isOR=setupState.provider==='openrouter';
+  const isOllama=setupState.provider==='ollama';
+  const isNvidia=setupState.provider==='nvidia';
   document.getElementById('tierToggle').style.display=isOR?'':'none';
-  document.getElementById('modelSearchWrap').style.display=isOR?'':'none';
-  document.getElementById('manualModelWrap').style.display=isOR?'none':'';
-  if(!isOR){document.getElementById('manualModel').placeholder=`Default: ${defaults[setupState.provider]||''}`;return;}
-  fetchModels(setupState.tier);
+  document.getElementById('modelSearchWrap').style.display=(isOR||isOllama||isNvidia)?'':'none';
+  document.getElementById('modelSearch').style.display=isOllama?'none':'';
+  document.getElementById('manualModelWrap').style.display=''; // Always show custom input
+  if(isOR) fetchModels(setupState.tier);
+  else if(isOllama) await fetchOllamaModels();
+  else if(isNvidia) await fetchNvidiaModels();
+  else { document.getElementById('manualModel').placeholder=`Default: ${defaults[setupState.provider]||''}`; }
+}
+
+async function fetchOllamaModels() {
+  const listEl=document.getElementById('modelList');
+  const loadEl=document.getElementById('modelLoading');
+  listEl.innerHTML='';loadEl.style.display='flex';
+  try{
+    const res=await fetch(`${API}/api/ollama/models`);
+    const d=await res.json();
+    if((d.models||[]).length === 0) {
+       listEl.innerHTML='<div style="padding:14px;color:var(--text2);font-size:0.8rem">No local models found.<br><br>Close dashboard and run <strong>Setup_Local_Models.bat</strong> in the Windows folder first to download local models!</div>';
+    } else {
+       renderModels(d.models.map(m=>m.id));
+    }
+  }catch{listEl.innerHTML='<div style="padding:14px;color:var(--text2);font-size:0.8rem">Failed to load local models.</div>';}
+  loadEl.style.display='none';
+}
+
+async function fetchNvidiaModels() {
+  const listEl=document.getElementById('modelList');
+  const loadEl=document.getElementById('modelLoading');
+  listEl.innerHTML='';loadEl.style.display='flex';
+  try{
+    const res=await fetch(`${API}/api/nvidia/models`);
+    const d=await res.json();
+    allModels=d.models||[];renderModels(allModels);
+  }catch{listEl.innerHTML='<div style="padding:14px;color:var(--text2);font-size:0.8rem">Failed to load NVIDIA NIM models.</div>';}
+  loadEl.style.display='none';
 }
 
 async function fetchModels(tier){
@@ -1364,6 +1408,7 @@ async function saveConfig(){
   document.getElementById('btnSave').innerHTML='<div class="spinner"></div> Saving...';
   let config={};
   if(setupState.provider==='openrouter')config={AI_PROVIDER:'openai',CLAUDE_CODE_USE_OPENAI:'1',OPENAI_API_KEY:setupState.key,OPENAI_BASE_URL:'https://openrouter.ai/api/v1',OPENAI_MODEL:setupState.model,AI_DISPLAY_MODEL:setupState.model};
+  else if(setupState.provider==='nvidia')config={AI_PROVIDER:'openai',CLAUDE_CODE_USE_OPENAI:'1',OPENAI_API_KEY:setupState.key,OPENAI_BASE_URL:'https://integrate.api.nvidia.com/v1',OPENAI_MODEL:setupState.model,AI_DISPLAY_MODEL:setupState.model};
   else if(setupState.provider==='gemini')config={AI_PROVIDER:'gemini',GEMINI_API_KEY:setupState.key,AI_DISPLAY_MODEL:setupState.model};
   else if(setupState.provider==='anthropic')config={AI_PROVIDER:'anthropic',ANTHROPIC_API_KEY:setupState.key,AI_DISPLAY_MODEL:setupState.model};
   else if(setupState.provider==='ollama')config={AI_PROVIDER:'ollama',CLAUDE_CODE_USE_OPENAI:'1',OPENAI_API_KEY:'ollama',OPENAI_BASE_URL:'http://localhost:11434/v1',OPENAI_MODEL:setupState.model,AI_DISPLAY_MODEL:setupState.model};
@@ -1389,6 +1434,33 @@ async function loadSystemInfo(){
     document.getElementById('sysEngine').textContent=d.engineVersion||'Not installed';
     document.getElementById('sysGit').innerHTML=d.hasGit?`<span class="badge badge-success">${d.portableGit?'USB':'System'}</span>`:'<span class="badge badge-error">Not found</span>';
     document.getElementById('sysPython').innerHTML=d.hasPython?`<span class="badge badge-success">${d.portablePython?'USB':'System'}</span>`:'<span class="badge badge-error">Not found</span>';
+    
+    if (d.ollamaInstalled) {
+       document.getElementById('cardOllama').style.display='block';
+       try {
+         const oRes = await fetch(`${API}/api/ollama/status`);
+         const oData = await oRes.json();
+         document.getElementById('sysOllamaStatus').innerHTML = oData.running ? '<span class="badge badge-success">Running</span>' : '<span class="badge badge-error">Stopped</span>';
+         
+         const actionsEl = document.getElementById('sysOllamaActions');
+         if (oData.running) {
+             actionsEl.innerHTML = `<button class="btn btn-outline" style="padding:5px 12px;font-size:0.75rem" onclick="toggleOllama('stop')">Stop</button>`;
+         } else {
+             actionsEl.innerHTML = `<button class="btn btn-primary" style="padding:5px 12px;font-size:0.75rem" onclick="toggleOllama('start')">Start</button>`;
+         }
+         
+         const mRes = await fetch(`${API}/api/ollama/models`);
+         const mData = await mRes.json();
+         if(mData.models && mData.models.length>0) {
+             document.getElementById('sysOllamaModels').innerHTML = `<strong>Installed Models:</strong><br>` + mData.models.map(m=>`<div style="margin-top:6px;display:flex;align-items:center;gap:6px"><span>• ${m.name}</span> <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--text2)">${m.label||'Local'}</span></div>`).join('');
+         } else {
+             document.getElementById('sysOllamaModels').innerHTML = `No local models installed.`;
+         }
+       } catch {}
+    } else {
+       document.getElementById('cardOllama').style.display='none';
+    }
+
     if(d.diskTotal){
       const used=d.diskTotal-d.diskFree;
       document.getElementById('diskUsed').textContent=`Used: ${(used/1073741824).toFixed(1)} GB`;
@@ -1414,6 +1486,16 @@ async function viewLog(path){
   viewer.style.display='block';viewer.textContent='Loading...';
   try{const res=await fetch(`${API}/api/logs/read?path=${encodeURIComponent(path)}`);const {content}=await res.json();viewer.textContent=content||'(empty)';}
   catch{viewer.textContent='Failed to read file.';}
+}
+
+async function toggleOllama(action) {
+  try {
+    await fetch(`${API}/api/ollama/${action}`, {method:'POST'});
+    showToast(`Ollama ${action === 'start' ? 'started' : 'stopped'}`, 'success');
+    setTimeout(loadSystemInfo, 1500);
+  } catch {
+    showToast(`Failed to ${action} Ollama`, 'error');
+  }
 }
 
 // ─── Actions ─────────────────────────────────────────────────

@@ -37,7 +37,7 @@ echo !CYAN! / ____/ /_/ / / / /_/ /_/ / /_/ / /  __/  / ___ ^|_/ /   !RESET!
 echo !CYAN!/_/    \____/_/  \__/\__,_/_.___/_/\___/  /_/  ^|_/___/   !RESET!
 echo.
 echo !CYAN!=========================================================!RESET!
-echo   !BOLD!Portable AI USB - Launcher!RESET!
+echo   !BOLD!OpenClaude Multi-Platform - Launcher!RESET!
 echo !CYAN!=========================================================!RESET!
 echo.
 
@@ -99,17 +99,19 @@ echo   !CYAN!2)!RESET! !BOLD!Gemini!RESET!       !DIM!- Google AI API!RESET!
 echo   !CYAN!3)!RESET! !BOLD!Claude!RESET!       !DIM!- Anthropic API!RESET!
 echo   !CYAN!4)!RESET! !BOLD!Ollama!RESET!       !DIM!- Local Offline AI!RESET!
 echo   !CYAN!5)!RESET! !BOLD!OpenAI!RESET!       !DIM!- GPT / Codex API!RESET!
+echo   !CYAN!6)!RESET! !BOLD!NVIDIA NIM!RESET!   !DIM!- Optimized GPU Inference (Free Tier)!RESET!
 echo.
 :prompt_provider
 set "PROVIDER_SEL="
-set /p "PROVIDER_SEL=  Select your provider !CYAN!(1-5)!RESET!: "
+set /p "PROVIDER_SEL=  Select your provider !CYAN!(1-6)!RESET!: "
 
 if "!PROVIDER_SEL!"=="1" goto setup_openrouter
 if "!PROVIDER_SEL!"=="2" goto setup_gemini
 if "!PROVIDER_SEL!"=="3" goto setup_claude
 if "!PROVIDER_SEL!"=="4" goto setup_ollama
 if "!PROVIDER_SEL!"=="5" goto setup_openai
-echo   !RED![ERROR] Invalid selection. Please choose 1-5.!RESET!
+if "!PROVIDER_SEL!"=="6" goto setup_nvidia
+echo   !RED![ERROR] Invalid selection. Please choose 1-6.!RESET!
 goto prompt_provider
 
 :: ---------------------------------------------------------
@@ -173,7 +175,7 @@ set /p "FREE_SEL=  Choose a model !CYAN!(1-!FREE_MAX!)!RESET!: "
 if "!FREE_SEL!"=="!FREE_MAX!" (
     set /p "USER_MODEL=  Enter custom model string: "
 ) else (
-    set "USER_MODEL=!FREE_MODEL_%FREE_SEL%!"
+    for %%V in (!FREE_SEL!) do set "USER_MODEL=!FREE_MODEL_%%V!"
     if "!USER_MODEL!"=="" (
         echo   !RED![ERROR] Invalid selection. Please choose 1 to !FREE_MAX!.!RESET!
         goto prompt_free_sel
@@ -206,7 +208,7 @@ set /p "PAID_SEL=  Choose a model !CYAN!(1-!PAID_MAX!)!RESET!: "
 if "!PAID_SEL!"=="!PAID_MAX!" (
     set /p "USER_MODEL=  Enter custom model string: "
 ) else (
-    set "USER_MODEL=!PAID_MODEL_%PAID_SEL%!"
+    for %%V in (!PAID_SEL!) do set "USER_MODEL=!PAID_MODEL_%%V!"
     if "!USER_MODEL!"=="" (
         echo   !RED![ERROR] Invalid selection. Please choose 1 to !PAID_MAX!.!RESET!
         goto prompt_paid_sel
@@ -222,6 +224,70 @@ if "!PAID_SEL!"=="!PAID_MAX!" (
     echo CLAUDE_CODE_USE_OPENAI=1
     echo OPENAI_API_KEY=%USER_API_KEY%
     echo OPENAI_BASE_URL=https://openrouter.ai/api/v1
+    echo OPENAI_MODEL=%USER_MODEL%
+    echo AI_DISPLAY_MODEL=%USER_MODEL%
+) > "%ENV_FILE%"
+goto finish_setup
+
+:: ---------------------------------------------------------
+::   NVIDIA NIM SETUP
+:: ---------------------------------------------------------
+:setup_nvidia
+echo.
+echo   !CYAN!--- NVIDIA NIM SETUP ---!RESET!
+echo.
+set /p "USER_API_KEY=  Enter your NVIDIA API Key: "
+if "!USER_API_KEY!"=="" (
+    echo   !RED![ERROR] API Key cannot be empty!!RESET!
+    goto setup_nvidia
+)
+set "KEY_MASK=!USER_API_KEY:~0,6!****!USER_API_KEY:~-4!"
+echo   !DIM!Key: !KEY_MASK!!RESET!
+echo.
+echo   !YELLOW![~] Verifying API Key... Please wait...!RESET!
+powershell -NoProfile -Command "$headers = @{ 'Authorization' = 'Bearer !USER_API_KEY!' }; try { $response = Invoke-RestMethod -Uri 'https://integrate.api.nvidia.com/v1/models' -Headers $headers -ErrorAction Stop; exit 0 } catch { exit 1 }"
+if errorlevel 1 (
+    echo   !RED![ERROR] Invalid or expired NVIDIA API Key!!RESET!
+    goto setup_nvidia
+)
+echo   !GREEN![OK] Key Verified!!RESET!
+echo.
+echo   !CYAN!--- NVIDIA MODELS ---!RESET! !DIM!(Live Fetching...)!RESET!
+set "idx=1"
+for /f "delims=" %%I in ('powershell -NoProfile -Command "$headers = @{ 'Authorization' = 'Bearer !USER_API_KEY!' }; $d = (Invoke-RestMethod -Uri 'https://integrate.api.nvidia.com/v1/models' -Headers $headers).data; $d | Select-Object -First 20 -ExpandProperty id"') do (
+    set "NVIDIA_MODEL_!idx!=%%I"
+    echo   !CYAN!!idx!^)!RESET! %%I
+    set /a "idx+=1"
+)
+if "!idx!"=="1" (
+    echo   !YELLOW![API Error] Could not fetch models, using fallback...!RESET!
+    set "NVIDIA_MODEL_1=meta/llama-3.1-70b-instruct"
+    echo   !CYAN!1^)!RESET! meta/llama-3.1-70b-instruct
+    set /a "idx=2"
+)
+set "NVIDIA_MAX=!idx!"
+echo   !CYAN!!NVIDIA_MAX!^)!RESET! !DIM!Custom NVIDIA Model...!RESET!
+echo.
+:prompt_nvidia_sel
+set "NVIDIA_SEL="
+set /p "NVIDIA_SEL=  Choose a model !CYAN!(1-!NVIDIA_MAX!)!RESET!: "
+
+if "!NVIDIA_SEL!"=="!NVIDIA_MAX!" (
+    set /p "USER_MODEL=  Enter custom model string: "
+) else (
+    for %%V in (!NVIDIA_SEL!) do set "USER_MODEL=!NVIDIA_MODEL_%%V!"
+    if "!USER_MODEL!"=="" (
+        echo   !RED![ERROR] Invalid selection. Please choose 1 to !NVIDIA_MAX!.!RESET!
+        goto prompt_nvidia_sel
+    )
+)
+
+:save_settings_nvidia
+(
+    echo AI_PROVIDER=openai
+    echo CLAUDE_CODE_USE_OPENAI=1
+    echo OPENAI_API_KEY=%USER_API_KEY%
+    echo OPENAI_BASE_URL=https://integrate.api.nvidia.com/v1
     echo OPENAI_MODEL=%USER_MODEL%
     echo AI_DISPLAY_MODEL=%USER_MODEL%
 ) > "%ENV_FILE%"
@@ -368,6 +434,7 @@ set "PROVIDER_NAME=!AI_PROVIDER!"
 if "!AI_PROVIDER!"=="openai" (
     if defined OPENAI_BASE_URL (
         echo !OPENAI_BASE_URL! | findstr /C:"openrouter" >nul && set "PROVIDER_NAME=OpenRouter"
+        echo !OPENAI_BASE_URL! | findstr /C:"integrate.api.nvidia.com" >nul && set "PROVIDER_NAME=NVIDIA NIM"
         echo !OPENAI_BASE_URL! | findstr /C:"api.openai.com" >nul && set "PROVIDER_NAME=OpenAI"
         echo !OPENAI_BASE_URL! | findstr /C:"localhost:11434" >nul && set "PROVIDER_NAME=Ollama"
     )
@@ -379,7 +446,7 @@ if "!AI_PROVIDER!"=="ollama" set "PROVIDER_NAME=Ollama (Local)"
 title Portable AI USB - !PROVIDER_NAME! - !AI_DISPLAY_MODEL!
 
 echo !CYAN!=========================================================!RESET!
-echo   !BOLD!Portable AI USB - Ready!RESET!
+echo   !BOLD!OpenClaude Multi-Platform - Ready!RESET!
 echo !CYAN!=========================================================!RESET!
 echo.
 echo   !BOLD!Provider!RESET! : !GREEN!!PROVIDER_NAME!!RESET!
@@ -420,6 +487,17 @@ set "CMD_ARGS="
 goto do_launch
 
 :do_launch
+if "!AI_PROVIDER!"=="ollama" (
+    if exist "%DATA_DIR%\ollama\ollama.exe" (
+        echo   !CYAN![~] Starting Local Ollama Server...!RESET!
+        set "OLLAMA_MODELS=%DATA_DIR%\ollama\data"
+        start "Ollama Portable" /B /MIN "%DATA_DIR%\ollama\ollama.exe" serve >nul 2>&1
+        timeout /t 3 /nobreak >nul
+        echo   !GREEN![OK] Ollama running!RESET!
+        echo.
+    )
+)
+
 echo   !CYAN![~] Starting AI Engine...!RESET!
 echo.
 set "PATH=%NODE_DIR%;%PATH%"
@@ -432,5 +510,13 @@ if defined AI_PROVIDER set "PROVIDER_ARGS=--provider !AI_PROVIDER!"
 pushd "%BIN_DIR%"
 call npx.cmd openclaude !PROVIDER_ARGS! !CMD_ARGS!
 popd
+
+if "!AI_PROVIDER!"=="ollama" (
+    if exist "%DATA_DIR%\ollama\ollama.exe" (
+        echo.
+        echo   !CYAN![~] Stopping Local Ollama Server...!RESET!
+        taskkill /F /IM ollama.exe >nul 2>&1
+    )
+)
 
 pause

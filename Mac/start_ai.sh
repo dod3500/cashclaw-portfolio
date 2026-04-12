@@ -38,7 +38,7 @@ echo -e "${CYAN} / ____/ /_/ / / / /_/ /_/ / /_/ / /  __/  / ___ |_/ /   ${RESET
 echo -e "${CYAN}/_/    \\____/_/  \\__/\\__,_/_.___/_/\\___/  /_/  |_/___/   ${RESET}"
 echo ""
 echo -e "${CYAN}=========================================================${RESET}"
-echo -e "  ${BOLD}Portable AI USB - Launcher (macOS)${RESET}"
+echo -e "  ${BOLD}OpenClaude Multi-Platform - Launcher${RESET}"
 echo -e "${CYAN}=========================================================${RESET}"
 echo ""
 
@@ -96,17 +96,19 @@ setup_provider() {
     echo -e "  ${CYAN}3)${RESET} ${BOLD}Claude${RESET}       ${DIM}- Anthropic API${RESET}"
     echo -e "  ${CYAN}4)${RESET} ${BOLD}Ollama${RESET}       ${DIM}- Local Offline AI${RESET}"
     echo -e "  ${CYAN}5)${RESET} ${BOLD}OpenAI${RESET}       ${DIM}- GPT / Codex API${RESET}"
+    echo -e "  ${CYAN}6)${RESET} ${BOLD}NVIDIA NIM${RESET}   ${DIM}- Optimized GPU Inference (Free Tier)${RESET}"
     echo ""
 
     while true; do
-        read -p "  Select your provider (1-5): " PROVIDER_SEL
+        read -p "  Select your provider (1-6): " PROVIDER_SEL
         case "$PROVIDER_SEL" in
             1) setup_openrouter; return ;;
             2) setup_gemini; return ;;
             3) setup_claude; return ;;
             4) setup_ollama; return ;;
             5) setup_openai; return ;;
-            *) echo -e "  ${RED}[ERROR] Invalid selection. Please choose 1-5.${RESET}" ;;
+            6) setup_nvidia; return ;;
+            *) echo -e "  ${RED}[ERROR] Invalid selection. Please choose 1-6.${RESET}" ;;
         esac
     done
 }
@@ -118,6 +120,7 @@ verify_key() {
         openrouter) curl -sf -H "Authorization: Bearer $key" https://openrouter.ai/api/v1/auth/key > /dev/null 2>&1 ;;
         gemini)     curl -sf "https://generativelanguage.googleapis.com/v1beta/models?key=$key" > /dev/null 2>&1 ;;
         anthropic)  curl -sf -H "x-api-key: $key" -H "anthropic-version: 2023-06-01" https://api.anthropic.com/v1/models > /dev/null 2>&1 ;;
+        nvidia)     curl -sf -H "Authorization: Bearer $key" https://integrate.api.nvidia.com/v1/models > /dev/null 2>&1 ;;
         openai)     curl -sf -H "Authorization: Bearer $key" https://api.openai.com/v1/models > /dev/null 2>&1 ;;
     esac
 }
@@ -267,6 +270,52 @@ OPENAI_MODEL=${USER_MODEL}
 AI_DISPLAY_MODEL=${USER_MODEL}"
 }
 
+setup_nvidia() {
+    echo ""
+    echo -e "  ${CYAN}--- NVIDIA NIM SETUP ---${RESET}"
+    echo ""
+    read -p "  Enter your NVIDIA API Key: " USER_API_KEY
+    [ -z "$USER_API_KEY" ] && echo -e "  ${RED}[ERROR] Key cannot be empty!${RESET}" && setup_nvidia && return
+    echo -e "  ${DIM}Key: $(mask_key "$USER_API_KEY")${RESET}"
+    echo ""
+    if ! verify_key nvidia "$USER_API_KEY"; then
+        echo -e "  ${RED}[ERROR] Invalid or expired NVIDIA API Key!${RESET}"
+        setup_nvidia; return
+    fi
+    echo -e "  ${GREEN}[OK] Key Verified!${RESET}"
+    echo ""
+
+    echo -e "  ${CYAN}--- NVIDIA MODELS ---${RESET} ${DIM}(Fetching...)${RESET}"
+    MODELS=$(curl -sf -H "Authorization: Bearer $USER_API_KEY" https://integrate.api.nvidia.com/v1/models 2>/dev/null | grep -Eo '"id"[[:space:]]*:[[:space:]]*"[^"]*"' | sed -e 's/"id"[[:space:]]*:[[:space:]]*"//g' -e 's/"//g' | head -20)
+
+    if [ -z "$MODELS" ]; then
+        echo -e "  ${YELLOW}[API Error] Could not fetch models. Entering fallback...${RESET}"
+        USER_MODEL="meta/llama-3.1-70b-instruct"
+    else
+        idx=1
+        while IFS= read -r model; do
+            echo -e "  ${CYAN}${idx})${RESET} $model"
+            eval "MODEL_${idx}='$model'"
+            idx=$((idx+1))
+        done <<< "$MODELS"
+        echo -e "  ${CYAN}${idx})${RESET} ${DIM}Custom Model...${RESET}"
+        echo ""
+        read -p "  Choose a model (1-$idx): " MODEL_SEL
+        if [ "$MODEL_SEL" = "$idx" ]; then
+            read -p "  Enter custom model string: " USER_MODEL
+        else
+            eval "USER_MODEL=\$MODEL_${MODEL_SEL}"
+        fi
+    fi
+
+    save_env "AI_PROVIDER=openai
+CLAUDE_CODE_USE_OPENAI=1
+OPENAI_API_KEY=${USER_API_KEY}
+OPENAI_BASE_URL=https://integrate.api.nvidia.com/v1
+OPENAI_MODEL=${USER_MODEL}
+AI_DISPLAY_MODEL=${USER_MODEL}"
+}
+
 # ─── Main Flow ──────────────────────────────────────────────
 if [ "$goto_loaded" -eq 0 ]; then
     setup_provider
@@ -287,6 +336,7 @@ PROVIDER_NAME="$AI_PROVIDER"
 case "$AI_PROVIDER" in
     openai)
         if [[ "$OPENAI_BASE_URL" == *"openrouter"* ]]; then PROVIDER_NAME="OpenRouter"
+        elif [[ "$OPENAI_BASE_URL" == *"integrate.api.nvidia.com"* ]]; then PROVIDER_NAME="NVIDIA NIM"
         elif [[ "$OPENAI_BASE_URL" == *"api.openai.com"* ]]; then PROVIDER_NAME="OpenAI"
         elif [[ "$OPENAI_BASE_URL" == *"localhost:11434"* ]]; then PROVIDER_NAME="Ollama"
         fi ;;
@@ -296,7 +346,7 @@ case "$AI_PROVIDER" in
 esac
 
 echo -e "${CYAN}=========================================================${RESET}"
-echo -e "  ${BOLD}Portable AI USB - Ready${RESET}"
+echo -e "  ${BOLD}OpenClaude Multi-Platform - Ready${RESET}"
 echo -e "${CYAN}=========================================================${RESET}"
 echo ""
 echo -e "  ${BOLD}Provider${RESET} : ${GREEN}${PROVIDER_NAME}${RESET}"
