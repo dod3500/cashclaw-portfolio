@@ -17,6 +17,15 @@ set "ROOT_DIR=%USB_ROOT%..\\"
 set "BIN_DIR=%USB_ROOT%bin"
 set "NODE=%BIN_DIR%\node-v22.14.0-win-x64\node.exe"
 set "DASHBOARD=%ROOT_DIR%dashboard\server.mjs"
+set "DATA_DIR=%ROOT_DIR%data"
+
+:: Portable data - keep everything on USB
+set "CLAUDE_CONFIG_DIR=%DATA_DIR%\openclaude"
+set "XDG_CONFIG_HOME=%DATA_DIR%\config"
+set "XDG_DATA_HOME=%DATA_DIR%\app_data"
+if not exist "%CLAUDE_CONFIG_DIR%" mkdir "%CLAUDE_CONFIG_DIR%"
+if not exist "%XDG_CONFIG_HOME%" mkdir "%XDG_CONFIG_HOME%"
+if not exist "%XDG_DATA_HOME%" mkdir "%XDG_DATA_HOME%"
 
 echo.
 echo %CYAN%=========================================================%R%
