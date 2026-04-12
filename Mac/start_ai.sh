@@ -24,9 +24,10 @@ fi
 export PATH="$NODE_DIR/bin:$PATH"
 
 # Portable data
+export CLAUDE_CONFIG_DIR="$DATA_DIR/openclaude"
 export XDG_CONFIG_HOME="$DATA_DIR/config"
 export XDG_DATA_HOME="$DATA_DIR/app_data"
-mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$DATA_DIR"
+mkdir -p "$CLAUDE_CONFIG_DIR" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$DATA_DIR"
 
 # Banner
 echo ""

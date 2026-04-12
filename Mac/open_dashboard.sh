@@ -22,6 +22,13 @@ if [ -z "$NODE" ]; then
     exit 1
 fi
 
+# Portable data
+DATA_DIR="$ROOT_DIR/data"
+export CLAUDE_CONFIG_DIR="$DATA_DIR/openclaude"
+export XDG_CONFIG_HOME="$DATA_DIR/config"
+export XDG_DATA_HOME="$DATA_DIR/app_data"
+mkdir -p "$CLAUDE_CONFIG_DIR" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
+
 echo ""
 echo -e "${CYAN}=========================================================${RESET}"
 echo -e "  ${BOLD}Portable AI USB - Configuration Dashboard${RESET}"

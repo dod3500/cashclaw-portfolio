@@ -20,9 +20,11 @@ set "ENV_FILE=%DATA_DIR%\ai_settings.env"
 set "NODE_DIR=%BIN_DIR%\node-v22.14.0-win-x64"
 
 :: 1. Force the portable AI to save logs/memory strictly to the USB
+set "CLAUDE_CONFIG_DIR=%DATA_DIR%\openclaude"
 set "XDG_CONFIG_HOME=%DATA_DIR%\config"
 set "XDG_DATA_HOME=%DATA_DIR%\app_data"
 
+if not exist "%CLAUDE_CONFIG_DIR%" mkdir "%CLAUDE_CONFIG_DIR%"
 if not exist "%XDG_CONFIG_HOME%" mkdir "%XDG_CONFIG_HOME%"
 if not exist "%XDG_DATA_HOME%" mkdir "%XDG_DATA_HOME%"
 
