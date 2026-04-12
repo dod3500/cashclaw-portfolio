@@ -277,18 +277,7 @@ echo   !DIM!You never have to run this again unless you!RESET!
 echo   !DIM!delete the bin folder.!RESET!
 echo.
 
-:: ─── Local Model Setup Prompt ────────────────────────────────
-:prompt_local
-echo.
-set /p "INSTALL_LOCAL=  Would you like to install local AI models (Ollama)? (Y/N): "
-if defined INSTALL_LOCAL set "INSTALL_LOCAL=!INSTALL_LOCAL: =!"
-if /I "!INSTALL_LOCAL!"=="Y" (
-    echo.
-    call "%USB_ROOT%Setup_Local_Models.bat"
-) else if /I not "!INSTALL_LOCAL!"=="N" (
-    echo   !RED![ERROR] Please select Y or N.!RESET!
-    goto prompt_local
-)
+goto prompt_launch
 
 :: ─── Auto-Launch Prompt ──────────────────────────────────────
 :prompt_launch

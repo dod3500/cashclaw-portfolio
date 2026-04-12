@@ -39,6 +39,7 @@ echo   !BOLD!Current Settings:!RESET!
 set "PROVIDER_TYPE=!AI_PROVIDER!"
 if "!AI_PROVIDER!"=="openai" (
     echo !OPENAI_BASE_URL! | findstr /C:"openrouter" >nul && set "PROVIDER_TYPE=openrouter"
+    echo !OPENAI_BASE_URL! | findstr /C:"integrate.api.nvidia.com" >nul && set "PROVIDER_TYPE=nvidia"
 )
 echo   - Provider : !GREEN!!PROVIDER_TYPE!!RESET!
 echo   - Model    : !GREEN!!AI_DISPLAY_MODEL!!RESET!
@@ -85,7 +86,29 @@ if "!PROVIDER_TYPE!"=="openrouter" (
     if "!MODEL_SEL!"=="!MAX_IDX!" (
         set /p "NEW_MODEL=  Enter custom model string: "
     ) else (
-        set "NEW_MODEL=!MODEL_%MODEL_SEL%!"
+        for %%V in (!MODEL_SEL!) do set "NEW_MODEL=!MODEL_%%V!"
+    )
+    if not "!NEW_MODEL!"=="" (
+        set "OPENAI_MODEL=!NEW_MODEL!"
+        set "AI_DISPLAY_MODEL=!NEW_MODEL!"
+    )
+) else if "!PROVIDER_TYPE!"=="nvidia" (
+    echo   !CYAN![~] Fetching NVIDIA models...!RESET!
+    set "idx=1"
+    set "PS_CMD=$headers = @{ 'Authorization' = 'Bearer !OPENAI_API_KEY!' }; $d = (Invoke-RestMethod -Uri 'https://integrate.api.nvidia.com/v1/models' -Headers $headers).data; $d | Select-Object -First 20 -ExpandProperty id"
+    for /f "delims=" %%I in ('powershell -NoProfile -Command "!PS_CMD!"') do (
+        set "MODEL_!idx!=%%I"
+        echo   !CYAN!!idx!^)!RESET! %%I
+        set /a "idx+=1"
+    )
+    set "MAX_IDX=!idx!"
+    echo   !CYAN!!MAX_IDX!^)!RESET! Custom Model...
+    
+    set /p "MODEL_SEL=  Choose a model (1-!MAX_IDX!): "
+    if "!MODEL_SEL!"=="!MAX_IDX!" (
+        set /p "NEW_MODEL=  Enter custom model string: "
+    ) else (
+        for %%V in (!MODEL_SEL!) do set "NEW_MODEL=!MODEL_%%V!"
     )
     if not "!NEW_MODEL!"=="" (
         set "OPENAI_MODEL=!NEW_MODEL!"
@@ -118,6 +141,8 @@ if "!PROVIDER_TYPE!"=="openrouter" (
     powershell -NoProfile -Command "try { Invoke-RestMethod -Uri 'https://generativelanguage.googleapis.com/v1beta/models?key=!NEW_KEY!' -ErrorAction Stop; exit 0 } catch { exit 1 }"
 ) else if "!PROVIDER_TYPE!"=="anthropic" (
     powershell -NoProfile -Command "$headers = @{ 'x-api-key' = '!NEW_KEY!'; 'anthropic-version' = '2023-06-01' }; try { Invoke-RestMethod -Uri 'https://api.anthropic.com/v1/models' -Headers $headers -ErrorAction Stop; exit 0 } catch { exit 1 }"
+) else if "!PROVIDER_TYPE!"=="nvidia" (
+    powershell -NoProfile -Command "$headers = @{ 'Authorization' = 'Bearer !NEW_KEY!' }; try { Invoke-RestMethod -Uri 'https://integrate.api.nvidia.com/v1/models' -Headers $headers -ErrorAction Stop; exit 0 } catch { exit 1 }"
 ) else if "!PROVIDER_TYPE!"=="openai" (
     powershell -NoProfile -Command "$headers = @{ 'Authorization' = 'Bearer !NEW_KEY!' }; try { Invoke-RestMethod -Uri 'https://api.openai.com/v1/models' -Headers $headers -ErrorAction Stop; exit 0 } catch { exit 1 }"
 )

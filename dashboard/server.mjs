@@ -751,11 +751,28 @@ const server = createServer(async (req, res) => {
             return sendJSON(res, 200, { models });
         }
 
+        // NVIDIA NIM Models
+        if (url.pathname === '/api/nvidia/models' && req.method === 'GET') {
+            // NVIDIA NIM provides many models. We list the popular free/developer tier models here.
+            const models = [
+                'meta/llama-3.1-70b-instruct',
+                'meta/llama-3.1-8b-instruct',
+                'mistralai/mixtral-8x22b-instruct-v0.1',
+                'mistralai/mixtral-8x7b-instruct-v0.1',
+                'google/gemma-2-27b-it',
+                'google/gemma-2-9b-it',
+                'nvidia/nemotron-4-340b-instruct',
+                'microsoft/phi-3-mini-128k-instruct'
+            ];
+            return sendJSON(res, 200, { models });
+        }
+
         // Verify Key
         if (url.pathname === '/api/verify-key' && req.method === 'POST') {
             const { provider, key } = await readBody(req);
             let valid = false;
             if (provider === 'openrouter') { const r = await fetchExternal('https://openrouter.ai/api/v1/auth/key', { 'Authorization': `Bearer ${key}` }); valid = r.status === 200; }
+            else if (provider === 'nvidia') { const r = await fetchExternal('https://integrate.api.nvidia.com/v1/models', { 'Authorization': `Bearer ${key}` }); valid = r.status === 200; }
             else if (provider === 'gemini') { const r = await fetchExternal(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`); valid = r.status === 200; }
             else if (provider === 'anthropic') { const r = await fetchExternal('https://api.anthropic.com/v1/models', { 'x-api-key': key, 'anthropic-version': '2023-06-01' }); valid = r.status === 200; }
             else if (provider === 'openai') { const r = await fetchExternal('https://api.openai.com/v1/models', { 'Authorization': `Bearer ${key}` }); valid = r.status === 200; }

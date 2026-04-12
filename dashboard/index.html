@@ -458,6 +458,7 @@ select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%
             <h2>Select AI Provider</h2><p class="subtitle">Choose where your AI requests will be routed</p>
             <div class="provider-grid">
               <div class="provider-option" data-provider="openrouter" onclick="selectProvider(this)"><div class="icon">🌐</div><div class="name">OpenRouter</div><div class="desc">200+ models</div></div>
+              <div class="provider-option" data-provider="nvidia" onclick="selectProvider(this)"><div class="icon">🟢</div><div class="name">NVIDIA NIM</div><div class="desc">Free GPU AI</div></div>
               <div class="provider-option" data-provider="gemini" onclick="selectProvider(this)"><div class="icon">💎</div><div class="name">Gemini</div><div class="desc">Google API</div></div>
               <div class="provider-option" data-provider="anthropic" onclick="selectProvider(this)"><div class="icon">🧠</div><div class="name">Claude</div><div class="desc">Anthropic API</div></div>
               <div class="provider-option" data-provider="ollama" onclick="selectProvider(this)"><div class="icon">🖥️</div><div class="name">Ollama</div><div class="desc">Local</div></div>
@@ -607,8 +608,8 @@ let currentMode = 'normal';
 let modeLocked = false;
 let agentMode = false;
 let workDir = '';
-const defaults = { gemini:'gemini-2.0-pro-exp-02-05', anthropic:'claude-3-7-sonnet-20250219', ollama:'llama3.2:3b', openai:'gpt-4o' };
-const providerNames = { openrouter:'OpenRouter', gemini:'Gemini', anthropic:'Claude', ollama:'Ollama', openai:'OpenAI' };
+const defaults = { gemini:'gemini-2.0-pro-exp-02-05', anthropic:'claude-3-7-sonnet-20250219', ollama:'llama3.2:3b', openai:'gpt-4o', nvidia:'meta/llama-3.1-70b-instruct' };
+const providerNames = { openrouter:'OpenRouter', gemini:'Gemini', anthropic:'Claude', ollama:'Ollama', openai:'OpenAI', nvidia:'NVIDIA NIM' };
 
 // ─── Init ────────────────────────────────────────────────────
 (async function init() {
@@ -633,6 +634,7 @@ async function loadConfig() {
     document.getElementById('noConfigBanner').style.display = isConfigured ? 'none' : 'flex';
 
     const pName = cfg.AI_PROVIDER === 'openai' && cfg.OPENAI_BASE_URL?.includes('openrouter') ? 'OpenRouter' : 
+                  cfg.AI_PROVIDER === 'openai' && cfg.OPENAI_BASE_URL?.includes('integrate.api.nvidia.com') ? 'NVIDIA NIM' : 
                   cfg.AI_PROVIDER === 'ollama' ? 'Local AI' :
                   providerNames[cfg.AI_PROVIDER] || cfg.AI_PROVIDER || '—';
     const model = cfg.AI_DISPLAY_MODEL || cfg.OPENAI_MODEL || '—';
@@ -1333,12 +1335,14 @@ function showKeyStatus(html,type){
 async function initModelStep(){
   const isOR=setupState.provider==='openrouter';
   const isOllama=setupState.provider==='ollama';
+  const isNvidia=setupState.provider==='nvidia';
   document.getElementById('tierToggle').style.display=isOR?'':'none';
-  document.getElementById('modelSearchWrap').style.display=(isOR||isOllama)?'':'none';
+  document.getElementById('modelSearchWrap').style.display=(isOR||isOllama||isNvidia)?'':'none';
   document.getElementById('modelSearch').style.display=isOllama?'none':'';
-  document.getElementById('manualModelWrap').style.display=(isOR||isOllama)?'none':'';
+  document.getElementById('manualModelWrap').style.display=''; // Always show custom input
   if(isOR) fetchModels(setupState.tier);
   else if(isOllama) await fetchOllamaModels();
+  else if(isNvidia) await fetchNvidiaModels();
   else { document.getElementById('manualModel').placeholder=`Default: ${defaults[setupState.provider]||''}`; }
 }
 
@@ -1355,6 +1359,18 @@ async function fetchOllamaModels() {
        renderModels(d.models.map(m=>m.id));
     }
   }catch{listEl.innerHTML='<div style="padding:14px;color:var(--text2);font-size:0.8rem">Failed to load local models.</div>';}
+  loadEl.style.display='none';
+}
+
+async function fetchNvidiaModels() {
+  const listEl=document.getElementById('modelList');
+  const loadEl=document.getElementById('modelLoading');
+  listEl.innerHTML='';loadEl.style.display='flex';
+  try{
+    const res=await fetch(`${API}/api/nvidia/models`);
+    const d=await res.json();
+    allModels=d.models||[];renderModels(allModels);
+  }catch{listEl.innerHTML='<div style="padding:14px;color:var(--text2);font-size:0.8rem">Failed to load NVIDIA NIM models.</div>';}
   loadEl.style.display='none';
 }
 
@@ -1392,6 +1408,7 @@ async function saveConfig(){
   document.getElementById('btnSave').innerHTML='<div class="spinner"></div> Saving...';
   let config={};
   if(setupState.provider==='openrouter')config={AI_PROVIDER:'openai',CLAUDE_CODE_USE_OPENAI:'1',OPENAI_API_KEY:setupState.key,OPENAI_BASE_URL:'https://openrouter.ai/api/v1',OPENAI_MODEL:setupState.model,AI_DISPLAY_MODEL:setupState.model};
+  else if(setupState.provider==='nvidia')config={AI_PROVIDER:'openai',CLAUDE_CODE_USE_OPENAI:'1',OPENAI_API_KEY:setupState.key,OPENAI_BASE_URL:'https://integrate.api.nvidia.com/v1',OPENAI_MODEL:setupState.model,AI_DISPLAY_MODEL:setupState.model};
   else if(setupState.provider==='gemini')config={AI_PROVIDER:'gemini',GEMINI_API_KEY:setupState.key,AI_DISPLAY_MODEL:setupState.model};
   else if(setupState.provider==='anthropic')config={AI_PROVIDER:'anthropic',ANTHROPIC_API_KEY:setupState.key,AI_DISPLAY_MODEL:setupState.model};
   else if(setupState.provider==='ollama')config={AI_PROVIDER:'ollama',CLAUDE_CODE_USE_OPENAI:'1',OPENAI_API_KEY:'ollama',OPENAI_BASE_URL:'http://localhost:11434/v1',OPENAI_MODEL:setupState.model,AI_DISPLAY_MODEL:setupState.model};
