@@ -114,7 +114,7 @@ echo !CYAN!---------------------------------------------------------!RESET!
 echo.
 
 :: ─── Step 3: Download Node.js ────────────────────────────────
-if exist "%NODE_DIR%\node.exe" (
+if exist "%NODE_DIR%\npm.cmd" (
     echo   !GREEN![!STEP!/!TOTAL_STEPS!] Portable Node.js ... already installed [SKIP]!RESET!
 ) else (
     echo   !CYAN![!STEP!/!TOTAL_STEPS!] Downloading Portable Node.js ^(~30MB^)...!RESET!
@@ -136,12 +136,12 @@ if exist "%NODE_DIR%\node.exe" (
     )
 
     echo   !CYAN!  Extracting...!RESET!
-    powershell -NoProfile -Command "Expand-Archive -Path '%BIN_DIR%\%NODE_ZIP%' -DestinationPath '%BIN_DIR%' -Force"
+    tar.exe -xf "%BIN_DIR%\%NODE_ZIP%" -C "%BIN_DIR%"
     del "%BIN_DIR%\%NODE_ZIP%" 2>nul
 
     :: Verify extraction
-    if not exist "%NODE_DIR%\node.exe" (
-        echo   !RED![FATAL] Extraction failed! node.exe not found.!RESET!
+    if not exist "%NODE_DIR%\npm.cmd" (
+        echo   !RED![FATAL] Extraction failed! node/npm not found.!RESET!
         echo   !RED!Please delete the bin folder and try again.!RESET!
         pause
         exit /b
@@ -155,11 +155,13 @@ echo.
 echo   !CYAN![!STEP!/!TOTAL_STEPS!] Installing OpenClaude Engine...!RESET!
 
 pushd "%BIN_DIR%"
+:: Add Node to PATH so postinstall scripts can find it
+set "PATH=%NODE_DIR%;%PATH%"
 :: Skip npm init if package.json already exists
 if not exist "%BIN_DIR%\package.json" (
-    call "%NODE_DIR%\npm.cmd" init -y >nul 2>&1
+    call npm init -y >nul 2>&1
 )
-call "%NODE_DIR%\npm.cmd" install @gitlawb/openclaude --no-audit --no-fund --loglevel=error
+call npm install @gitlawb/openclaude --no-audit --no-fund --loglevel=error
 if errorlevel 1 (
     echo   !RED![FATAL] OpenClaude installation failed!!RESET!
     popd
@@ -191,7 +193,8 @@ if /I "!PACK_TOOLS!"=="Y" (
             echo   !RED!  [WARN] Git download failed - skipping.!RESET!
         ) else (
             echo   !DIM!      Extracting...!RESET!
-            powershell -NoProfile -Command "Expand-Archive -Path '%BIN_DIR%\mingit.zip' -DestinationPath '%BIN_DIR%\git' -Force"
+            if not exist "%BIN_DIR%\git" mkdir "%BIN_DIR%\git"
+            tar.exe -xf "%BIN_DIR%\mingit.zip" -C "%BIN_DIR%\git"
             del "%BIN_DIR%\mingit.zip" 2>nul
             echo   !GREEN!  [OK] Portable Git installed!!RESET!
         )
@@ -215,7 +218,8 @@ if /I "!PACK_TOOLS!"=="Y" (
             echo   !RED!  [WARN] Python download failed - skipping.!RESET!
         ) else (
             echo   !DIM!      Extracting...!RESET!
-            powershell -NoProfile -Command "Expand-Archive -Path '%BIN_DIR%\python.zip' -DestinationPath '%BIN_DIR%\python' -Force"
+            if not exist "%BIN_DIR%\python" mkdir "%BIN_DIR%\python"
+            tar.exe -xf "%BIN_DIR%\python.zip" -C "%BIN_DIR%\python"
             del "%BIN_DIR%\python.zip" 2>nul
             echo   !GREEN!  [OK] Portable Python installed!!RESET!
         )
