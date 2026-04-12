@@ -56,7 +56,7 @@ Portable_AI_USB/
 │   ├── server.mjs             Node.js server with agent system
 │   └── index.html             Full-featured chat UI
 │
-├── 📂 data/               ← Settings & Chat History (shared)
+├── 📂 data/               ← All portable data (shared across platforms)
 │   ├── ai_settings.env        Your API keys and model config
 │   └── chats/                 Saved conversations
 │
@@ -96,7 +96,7 @@ Portable_AI_USB/
 | **Setup_First_Time** | Downloads Node.js, installs AI engine. Run once. |
 | **Start_AI** | Configure provider → select model → launch CLI agent. Use `--quick` for instant limitless mode. |
 | **Open_Dashboard** | Starts the web dashboard at `http://localhost:3000` |
-| **Change_Model_or_Provider** | Clears your current config and lets you pick a new provider/model |
+| **Change_Model_or_Provider** | Menu to change model, change API key, or full reset config |
 | **Uninstall** | Removes engine (bin/) and optionally all data (settings + chats) |
 
 ### Command-Line Flags (Start_AI)
@@ -155,7 +155,7 @@ Each platform only needs its own `bin/` folder (created by running setup on that
 ## 🔒 Security & Privacy
 
 - **Zero Footprint** — No files are written outside the USB/project folder
-- **Portable Data** — XDG directories are redirected to `data/`
+- **Portable Data** — `CLAUDE_CONFIG_DIR`, `XDG_CONFIG_HOME`, and `XDG_DATA_HOME` are all redirected to `data/`
 - **API Key Masking** — Keys are masked in all display output (e.g., `sk-abc1****xyz9`)
 - **Approval System** — In Normal mode, write operations require your explicit OK
 - **No Telemetry** — Nothing is sent anywhere except your chosen AI provider
@@ -183,6 +183,7 @@ Each platform only needs its own `bin/` folder (created by running setup on that
 | API key rejected | Double-check your key at the provider's website |
 | "No internet" | Setup requires internet. After setup, only API calls need internet. |
 | Models not loading | OpenRouter API may be slow. Try again, or enter a model name manually. |
+| Data leaking to `~/.openclaude` | Make sure you launch via `start_ai.sh` / `Start_AI.bat` — they set `CLAUDE_CONFIG_DIR` to keep data portable. |
 
 ---
 
